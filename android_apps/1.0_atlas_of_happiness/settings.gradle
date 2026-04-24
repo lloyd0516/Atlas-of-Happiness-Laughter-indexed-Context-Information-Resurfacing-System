@@ -1,0 +1,2 @@
+rootProject.name = 'atlas-of-happiness-v1_0'
+include ':atlasapp'

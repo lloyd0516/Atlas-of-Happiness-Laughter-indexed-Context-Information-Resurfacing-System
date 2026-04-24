@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="atlas_primary">#F6C7B6</color>
+    <color name="atlas_primary_dark">#E7B39C</color>
+    <color name="atlas_secondary">#F7E7A1</color>
+    <color name="atlas_lavender">#E6E6FA</color>
+    <color name="atlas_blue">#DCEAF7</color>
+    <color name="atlas_background">#FAFAFA</color>
+    <color name="atlas_surface">#FFFDFC</color>
+    <color name="atlas_warm_gray">#F2F2F2</color>
+    <color name="atlas_text_primary">#4B4B4B</color>
+    <color name="atlas_text_secondary">#7A7A7A</color>
+    <color name="atlas_divider">#E8E1DD</color>
+    <color name="atlas_success">#B9D7C0</color>
+    <color name="atlas_warning">#E7D7A8</color>
+    <color name="atlas_accent">#D7B8D8</color>
+    <color name="atlas_pin">#D98E73</color>
+    <color name="atlas_white">#FFFFFF</color>
+</resources>

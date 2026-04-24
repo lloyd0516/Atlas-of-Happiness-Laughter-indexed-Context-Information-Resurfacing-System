@@ -1,0 +1,33 @@
+<resources>
+    <style name="Theme.Atlas" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="colorPrimary">@color/atlas_primary</item>
+        <item name="colorPrimaryDark">@color/atlas_primary_dark</item>
+        <item name="colorAccent">@color/atlas_accent</item>
+        <item name="android:windowBackground">@color/atlas_background</item>
+        <item name="android:textColorPrimary">@color/atlas_text_primary</item>
+    </style>
+
+    <style name="Theme.Atlas.FullScreen" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowFullscreen">true</item>
+    </style>
+
+    <style name="Atlas.Card" parent="@style/CardView">
+        <item name="cardBackgroundColor">@color/atlas_surface</item>
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardElevation">1dp</item>
+        <item name="cardUseCompatPadding">true</item>
+    </style>
+
+    <style name="Atlas.SectionTitle" parent="@style/TextAppearance.AppCompat.Title">
+        <item name="android:textColor">@color/atlas_text_primary</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="Atlas.Body" parent="@style/TextAppearance.AppCompat.Body1">
+        <item name="android:textColor">@color/atlas_text_secondary</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+</resources>

@@ -1,0 +1,3 @@
+# Fill in your local Android SDK path before building.
+# Example on Windows:
+# sdk.dir=C\:\Users\\<YOU>\\AppData\\Local\\Android\\Sdk

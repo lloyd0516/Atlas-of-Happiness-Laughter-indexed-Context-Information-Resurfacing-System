@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/atlas_background">
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="20dp">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
+            <Button android:id="@+id/btnBack" android:layout_width="wrap_content" android:layout_height="wrap_content" android:background="@drawable/atlas_chip" android:text="@string/btn_back" android:textAllCaps="false" android:textColor="@color/atlas_text_primary" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="12dp" android:text="@string/logs_title" android:textColor="@color/atlas_text_primary" android:textSize="22sp" android:textStyle="bold" />
+            <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
+            <Button android:id="@+id/btnRefresh" android:layout_width="wrap_content" android:layout_height="wrap_content" android:background="@drawable/atlas_chip" android:text="@string/btn_refresh" android:textAllCaps="false" android:textColor="@color/atlas_text_primary" />
+        </LinearLayout>
+        <TextView android:id="@+id/emptyView" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:background="@drawable/atlas_section_bg" android:padding="16dp" android:text="@string/logs_empty" android:textColor="@color/atlas_text_secondary" />
+        <LinearLayout android:id="@+id/logContainer" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:orientation="vertical" />
+    </LinearLayout>
+</ScrollView>
