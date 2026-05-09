@@ -61,33 +61,7 @@ detection-level -> event-level
 
 ---
 
-## Android 构建
 
-当前工程使用较旧但已验证可用的 Android 构建栈：
-
-```text
-Gradle wrapper: 4.10.1
-Android Gradle Plugin: 3.2.1
-compileSdkVersion: 28
-targetSdkVersion: 28
-```
-
-建议使用 JDK 8 构建：
-
-```powershell
-cd android_apps/1.1_main
-$env:JAVA_HOME='C:\Program Files\Eclipse Adoptium\jdk-8.0.482.8-hotspot'
-$env:Path="$env:JAVA_HOME\bin;$env:Path"
-.\gradlew.bat :atlasapp:assembleDebug
-```
-
-APK 输出：
-
-```text
-android_apps/1.1_main/atlasapp/build/outputs/apk/debug/atlasapp-debug.apk
-```
-
----
 
 ## API Key 配置
 
