@@ -1,0 +1,164 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1700" height="950" viewBox="0 0 1700 950">
+  <defs>
+    <style>
+      .bg { fill: #ffffff; }
+      .title { font: 700 34px Arial, 'Microsoft YaHei', sans-serif; fill: #111; }
+      .caption { font: 700 28px Georgia, 'Times New Roman', serif; fill: #111; }
+      .section { font: 700 24px Arial, 'Microsoft YaHei', sans-serif; fill: #111; }
+      .label { font: 700 19px Arial, 'Microsoft YaHei', sans-serif; fill: #111; }
+      .text { font: 17px Arial, 'Microsoft YaHei', sans-serif; fill: #111; }
+      .small { font: 15px Arial, 'Microsoft YaHei', sans-serif; fill: #222; }
+      .mono { font: 15px Consolas, monospace; fill: #111; }
+      .win { fill: #b7cbea; stroke: #4d74ad; stroke-width: 2; }
+      .det { fill: #aecaec; stroke: #4d74ad; stroke-width: 2; }
+      .event { fill: #abc4e8; stroke: #4d74ad; stroke-width: 2; }
+      .no { fill: #ffffff; stroke: #4d74ad; stroke-width: 2; }
+      .auto { fill: #c8e6c9; stroke: #4e8f54; stroke-width: 2; }
+      .prompt { fill: #f8c9c0; stroke: #b45d50; stroke-width: 2; }
+      .wav { fill: #f6e2aa; stroke: #b58a2a; stroke-width: 2; }
+      .arrow { stroke: #111; stroke-width: 5; fill: none; marker-end: url(#arrow); }
+      .thin { stroke: #111; stroke-width: 2; fill: none; marker-end: url(#arrowThin); }
+      .brace { stroke: #555; stroke-width: 2; fill: none; }
+      .dash { stroke-dasharray: 8 6; }
+    </style>
+    <marker id="arrow" markerWidth="14" markerHeight="14" refX="11" refY="7" orient="auto">
+      <path d="M2,2 L12,7 L2,12 Z" fill="#111"/>
+    </marker>
+    <marker id="arrowThin" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M1,1 L9,5 L1,9 Z" fill="#111"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1700" height="950"/>
+  <text class="title" x="70" y="58">Atlas 1.1 Main：从 Speechmatics laughter detection 到 event、自动化记录与用户弹窗</text>
+
+  <!-- Panel A -->
+  <text class="section" x="210" y="115">(a) Speechmatics 返回 → detection-level</text>
+
+  <!-- chunks/windows -->
+  <text class="label" x="95" y="162">200ms audio chunks</text>
+  <rect class="win" x="70" y="185" width="64" height="42"/><text class="label" x="92" y="212">a</text>
+  <rect class="win" x="140" y="185" width="64" height="42"/><text class="label" x="162" y="212">a</text>
+  <rect class="win" x="210" y="185" width="64" height="42"/><text class="label" x="232" y="212">a</text>
+  <rect class="win" x="280" y="185" width="64" height="42"/><text class="label" x="302" y="212">a</text>
+  <rect class="win" x="350" y="185" width="64" height="42"/><text class="label" x="372" y="212">a</text>
+
+  <rect class="win" x="470" y="185" width="64" height="42"/><text class="label" x="493" y="212">a</text>
+  <rect class="win" x="540" y="185" width="64" height="42"/><text class="label" x="562" y="212">a</text>
+  <rect class="win" x="610" y="185" width="64" height="42"/><text class="label" x="632" y="212">a</text>
+
+  <text class="small" x="72" y="250">a = audio chunk；chunk 只是传输粒度，不是 detection 精度上限</text>
+
+  <!-- Speechmatics events -->
+  <path class="arrow" d="M242 235 V290"/>
+  <path class="arrow" d="M572 235 V290"/>
+
+  <rect class="det" x="80" y="305" width="315" height="58"/>
+  <text class="label" x="108" y="341">AudioEventStarted + Ended</text>
+
+  <rect class="det" x="455" y="305" width="245" height="58"/>
+  <text class="label" x="490" y="341">AudioEventEnded</text>
+
+  <text class="label" x="125" y="405">confidence ≥ 0.70 ?</text>
+  <text class="label" x="495" y="405">confidence &lt; 0.70</text>
+  <path class="arrow" d="M238 365 V430"/>
+  <path class="arrow" d="M578 365 V430"/>
+
+  <rect class="det" x="75" y="445" width="325" height="58"/>
+  <text class="label" x="130" y="481">laughter_detect_0</text>
+
+  <rect class="no" x="455" y="445" width="245" height="58"/>
+  <text class="label" x="535" y="481">rejected</text>
+
+  <text class="small" x="93" y="535">写入 detection_log.jsonl：start_sec / end_sec / confidence</text>
+  <text class="small" x="93" y="558">同时标记所在 30s WAV clip 为 laughter clip</text>
+
+  <!-- divider -->
+  <line x1="775" y1="105" x2="775" y2="610" stroke="#bbb" stroke-width="2"/>
+
+  <!-- Panel B -->
+  <text class="section" x="965" y="115">(b) detections → laughter events</text>
+  <text class="label" x="840" y="162">Accepted laughter detections</text>
+
+  <!-- detections timeline -->
+  <rect class="det" x="820" y="190" width="95" height="48"/><text class="label" x="842" y="221">det0</text>
+  <rect class="det" x="930" y="190" width="95" height="48"/><text class="label" x="952" y="221">det1</text>
+  <rect class="det" x="1120" y="190" width="95" height="48"/><text class="label" x="1142" y="221">det2</text>
+  <rect class="det" x="1400" y="190" width="95" height="48"/><text class="label" x="1422" y="221">det3</text>
+  <rect class="det" x="1510" y="190" width="95" height="48"/><text class="label" x="1532" y="221">det4</text>
+
+  <line x1="1028" y1="256" x2="1115" y2="256" stroke="#111" stroke-width="2"/>
+  <line x1="1028" y1="244" x2="1028" y2="268" stroke="#111" stroke-width="2"/>
+  <line x1="1115" y1="244" x2="1115" y2="268" stroke="#111" stroke-width="2"/>
+  <text class="label" x="1038" y="285">≤ 10 min</text>
+
+  <line x1="1220" y1="256" x2="1395" y2="256" stroke="#111" stroke-width="2"/>
+  <line x1="1220" y1="244" x2="1220" y2="268" stroke="#111" stroke-width="2"/>
+  <line x1="1395" y1="244" x2="1395" y2="268" stroke="#111" stroke-width="2"/>
+  <text class="label" x="1270" y="285">&gt; 10 min</text>
+
+  <path class="arrow" d="M1168 240 V315"/>
+  <path class="arrow" d="M1502 240 V315"/>
+
+  <rect class="event" x="820" y="330" width="395" height="62"/>
+  <text class="label" x="925" y="368">laughter_event_0</text>
+
+  <rect class="event" x="1400" y="330" width="205" height="62"/>
+  <text class="label" x="1438" y="368">event_1</text>
+
+  <text class="small" x="820" y="425">规则：相邻 accepted detection 的 start_sec 间隔 ≤ event_window_s(默认600s) → 同一 event</text>
+  <text class="small" x="820" y="450">若 gap &gt; 600s，前一个 event finalized，后一个 detection 开启新 event</text>
+
+  <!-- Panel C bottom -->
+  <line x1="70" y1="625" x2="1630" y2="625" stroke="#bbb" stroke-width="2"/>
+  <text class="section" x="385" y="675">(c) 自动化记录与用户弹窗行为逻辑</text>
+
+  <!-- automation timeline -->
+  <line x1="125" y1="745" x2="1520" y2="745" stroke="#222" stroke-width="3"/>
+  <text class="small" x="120" y="725">time</text>
+
+  <!-- buckets -->
+  <rect x="160" y="705" width="280" height="80" fill="none" stroke="#777" stroke-width="2" stroke-dasharray="8 6"/>
+  <text class="small" x="225" y="805">automation bucket 0：0-60s</text>
+  <rect x="440" y="705" width="280" height="80" fill="none" stroke="#777" stroke-width="2" stroke-dasharray="8 6"/>
+  <text class="small" x="505" y="805">bucket 1：60-120s</text>
+  <rect x="720" y="705" width="280" height="80" fill="none" stroke="#777" stroke-width="2" stroke-dasharray="8 6"/>
+  <text class="small" x="782" y="805">bucket 2：120-180s</text>
+
+  <!-- detections on timeline -->
+  <circle cx="210" cy="745" r="11" fill="#4d74ad"/><text class="small" x="180" y="700">det0</text>
+  <circle cx="320" cy="745" r="11" fill="#4d74ad"/><text class="small" x="290" y="700">det1</text>
+  <circle cx="510" cy="745" r="11" fill="#4d74ad"/><text class="small" x="480" y="700">det2</text>
+  <circle cx="1370" cy="745" r="11" fill="#4d74ad"/><text class="small" x="1340" y="700">no new laughter</text>
+
+  <path class="thin" d="M210 745 C210 700, 210 675, 260 660"/>
+  <rect class="auto" x="260" y="640" width="245" height="52"/>
+  <text class="label" x="282" y="673">record: 1 video + 2 photos</text>
+
+  <path class="thin dash" d="M320 745 C320 820, 450 820, 515 785"/>
+  <rect class="no" x="515" y="770" width="250" height="48"/>
+  <text class="label" x="555" y="801">skip: same 60s bucket</text>
+
+  <path class="thin" d="M510 745 C560 700, 605 675, 655 660"/>
+  <rect class="auto" x="655" y="640" width="245" height="52"/>
+  <text class="label" x="677" y="673">record: 1 video + 2 photos</text>
+
+  <path class="thin" d="M1210 745 C1210 690, 1210 665, 1260 650"/>
+  <rect class="prompt" x="1260" y="630" width="310" height="62"/>
+  <text class="label" x="1283" y="657">event finalized → trigger prompt</text>
+  <text class="small" x="1288" y="680">用户补充文字/语音/照片记录</text>
+
+  <line x1="1030" y1="745" x2="1210" y2="745" stroke="#111" stroke-width="2"/>
+  <line x1="1030" y1="733" x2="1030" y2="757" stroke="#111" stroke-width="2"/>
+  <line x1="1210" y1="733" x2="1210" y2="757" stroke="#111" stroke-width="2"/>
+  <text class="label" x="1060" y="730">600s no new laughter</text>
+
+  <!-- WAV strip -->
+  <rect class="wav" x="120" y="850" width="220" height="46"/><text class="label" x="150" y="880">30s WAV clip 0</text>
+  <rect class="wav" x="340" y="850" width="220" height="46"/><text class="label" x="370" y="880">30s WAV clip 1</text>
+  <rect class="wav" x="560" y="850" width="220" height="46"/><text class="label" x="590" y="880">30s WAV clip 2</text>
+  <text class="small" x="815" y="870">WAV clip 仍按 30s 保存 laughter/context；不是用户层面的 period 聚合</text>
+  <text class="small" x="815" y="895">event JSON 记录 saved_clip_paths、assets.videos[]、assets.photos[]</text>
+
+  <text class="caption" x="70" y="930">Figure: laughter detections aggregation into laughter events, with throttled automatic media capture and event-end user prompt.</text>
+</svg>

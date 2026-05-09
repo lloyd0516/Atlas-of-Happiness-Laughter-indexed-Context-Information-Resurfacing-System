@@ -1,0 +1,65 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/atlas_background"
+    tools:context=".HomeActivity">
+
+    <ScrollView
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/atlas_title" android:textColor="@color/atlas_text_primary" android:textSize="16sp" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="@string/home_heading" android:textColor="@color/atlas_text_primary" android:textSize="28sp" android:textStyle="bold" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="@string/atlas_subtitle" android:textColor="@color/atlas_text_secondary" android:textSize="14sp" />
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:orientation="horizontal" android:weightSum="2">
+                <android.support.v7.widget.CardView android:id="@+id/cardOpenPreview" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginRight="8dp" android:layout_weight="1" app:cardCornerRadius="16dp" app:cardElevation="1dp">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="@drawable/atlas_gradient_card" android:orientation="vertical" android:padding="16dp">
+                        <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_atlas_video" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="@string/nav_preview" android:textColor="@color/atlas_text_primary" android:textStyle="bold" />
+                    </LinearLayout>
+                </android.support.v7.widget.CardView>
+                <android.support.v7.widget.CardView android:id="@+id/cardOpenMap" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:layout_weight="1" app:cardCornerRadius="16dp" app:cardElevation="1dp">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="@drawable/atlas_gradient_card" android:orientation="vertical" android:padding="16dp">
+                        <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_atlas_map" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="@string/nav_map" android:textColor="@color/atlas_text_primary" android:textStyle="bold" />
+                    </LinearLayout>
+                </android.support.v7.widget.CardView>
+            </LinearLayout>
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:orientation="horizontal" android:weightSum="2">
+                <android.support.v7.widget.CardView android:id="@+id/cardOpenSettings" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginRight="8dp" android:layout_weight="1" app:cardCornerRadius="16dp" app:cardElevation="1dp">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="@drawable/atlas_gradient_card" android:orientation="vertical" android:padding="16dp">
+                        <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_atlas_settings" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="@string/nav_settings" android:textColor="@color/atlas_text_primary" android:textStyle="bold" />
+                    </LinearLayout>
+                </android.support.v7.widget.CardView>
+                <android.support.v7.widget.CardView android:id="@+id/cardOpenLogs" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:layout_weight="1" app:cardCornerRadius="16dp" app:cardElevation="1dp">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="@drawable/atlas_gradient_card" android:orientation="vertical" android:padding="16dp">
+                        <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_atlas_log" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="@string/nav_logs" android:textColor="@color/atlas_text_primary" android:textStyle="bold" />
+                    </LinearLayout>
+                </android.support.v7.widget.CardView>
+            </LinearLayout>
+
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:text="@string/event_detail_title" android:textColor="@color/atlas_text_primary" android:textSize="18sp" android:textStyle="bold" />
+            <TextView android:id="@+id/emptyView" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:background="@drawable/atlas_section_bg" android:padding="16dp" android:text="@string/home_empty" android:textColor="@color/atlas_text_secondary" />
+            <LinearLayout android:id="@+id/eventContainer" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:orientation="vertical" />
+        </LinearLayout>
+    </ScrollView>
+
+    <android.support.design.widget.FloatingActionButton android:id="@+id/fabOpenPreview" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_margin="20dp" android:contentDescription="@string/fab_open_preview" android:src="@drawable/ic_atlas_laughter" app:backgroundTint="@color/atlas_primary" app:layout_constraintBottom_toBottomOf="parent" app:layout_constraintEnd_toEndOf="parent" app:tint="@color/atlas_text_primary" />
+</android.support.constraint.ConstraintLayout>
