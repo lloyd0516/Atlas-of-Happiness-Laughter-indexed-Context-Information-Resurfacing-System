@@ -89,14 +89,4 @@ speechmatics_demo/README.md
 
 ---
 
-## 未纳入/不建议纳入 GitHub 的本地内容
 
-本地 workspace 中可能存在大规模数据、实验输出、手机日志和第三方研究代码目录。这些内容不属于当前发布版本，通常不应上传：
-
-```text
-datasets_unified/
-phone_runs/
-run_logs/
-output/
-server_sync/
-```
