@@ -55,6 +55,7 @@ public class EventDetailActivity extends AppCompatActivity {
     private LinearLayout userMediaContainer;
     private TextView gpsView;
     private TextView weatherView;
+    private ImageView weatherIconView;
     private ImageView imagePreview;
     private VideoView videoPreview;
     private TextView audioStatus;
@@ -88,6 +89,7 @@ public class EventDetailActivity extends AppCompatActivity {
         userMediaContainer = findViewById(R.id.userMediaContainer);
         gpsView = findViewById(R.id.txtGps);
         weatherView = findViewById(R.id.txtWeather);
+        weatherIconView = findViewById(R.id.imgWeatherIcon);
         imagePreview = findViewById(R.id.imagePreview);
         videoPreview = findViewById(R.id.videoPreview);
         audioStatus = findViewById(R.id.txtAudioStatus);
@@ -404,14 +406,21 @@ public class EventDetailActivity extends AppCompatActivity {
         JSONObject gps = derived != null ? derived.optJSONObject("gps") : null;
         JSONObject weather = derived != null ? derived.optJSONObject("weather") : null;
         if (gps != null && gps.has("lat") && gps.has("lng")) {
-            gpsView.setText(gps.optDouble("lat") + ", " + gps.optDouble("lng"));
+            String address = gps.optString("address", "");
+            String coords = getString(R.string.label_gps_coordinates) + ": " + gps.optDouble("lat") + ", " + gps.optDouble("lng");
+            if (gps.has("accuracy_m")) {
+                coords = coords + "\n" + getString(R.string.label_location_accuracy) + ": " + Math.round(gps.optDouble("accuracy_m")) + getString(R.string.unit_meter_short);
+            }
+            gpsView.setText(TextUtils.isEmpty(address) ? coords : address + "\n" + coords);
         } else {
             gpsView.setText(R.string.event_detail_context_missing);
         }
         if (weather != null && (weather.has("condition") || weather.has("temperature"))) {
             weatherView.setText(weather.optString("condition", "") + "  " + weather.optString("temperature", ""));
+            weatherIconView.setImageResource(AtlasWeatherIconMapper.drawableForKey(weather.optString("icon_key", AtlasWeatherIconMapper.keyForCondition(weather.optString("condition", "")))));
         } else {
             weatherView.setText(R.string.event_detail_context_missing);
+            weatherIconView.setImageResource(R.drawable.ic_atlas_weather);
         }
     }
 
@@ -578,11 +587,11 @@ public class EventDetailActivity extends AppCompatActivity {
         }
         AtlasContextResolver.refreshContext(this, repository, new AtlasContextResolver.Callback() {
             @Override
-            public void onResolved(final Double lat, final Double lng, final Long timestampMs, final String weatherCondition, final Double temperature) {
+            public void onResolved(final Double lat, final Double lng, final Double amapLat, final Double amapLng, final Float accuracyMeters, final Long timestampMs, final String locationName, final String adcode, final String weatherCondition, final Double temperature) {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        repository.updateDerivedContext(eventJson, lat, lng, timestampMs, weatherCondition, temperature);
+                        repository.updateDerivedContext(eventJson, lat, lng, amapLat, amapLng, accuracyMeters, timestampMs, locationName, adcode, weatherCondition, temperature);
                         eventJson = repository.loadEventById(eventId);
                         renderContext();
                     }

@@ -25,8 +25,15 @@ $env:Path="$env:JAVA_HOME\bin;$env:Path"
 
 ## 安全说明
 
-仓库不提交真实 Speechmatics API key。请在 App Settings 中填写，或通过环境变量注入：
+仓库不提交真实 Speechmatics / 高德 API key。请在 App Settings 中填写，或通过环境变量注入：
 
 ```powershell
 $env:SPEECHMATICS_API_KEY='your_key_here'
+$env:AMAP_API_KEY='your_key_here'
+```
+
+本地构建也可以在未提交的 `local.properties` 中配置：
+
+```properties
+amap.api.key=your_key_here
 ```

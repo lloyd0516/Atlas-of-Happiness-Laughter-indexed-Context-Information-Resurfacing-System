@@ -1,0 +1,13 @@
+{
+  "chunk_ms": 200,
+  "clip_duration_s": 30,
+  "context_neighbor_clips": 2,
+  "event_window_s": 600,
+  "trigger_video_duration_s": 5,
+  "trigger_photo_count": 2,
+  "detection_level": "medium",
+  "speechmatics_language": "en",
+  "speechmatics_operating_point": "enhanced",
+  "speechmatics_max_delay_s": null,
+  "output_root": "run_logs/joyful_moment"
+}

@@ -42,8 +42,8 @@
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:text="@string/settings_api" android:textColor="@color/atlas_text_primary" android:textStyle="bold" />
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="@string/settings_api_caption" android:textColor="@color/atlas_text_secondary" />
         <TextView android:id="@+id/txtMapsKeyHint" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:background="@drawable/atlas_section_bg" android:padding="12dp" android:text="@string/settings_google_maps_key_needed" android:textColor="@color/atlas_text_secondary" />
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="@string/settings_google_weather_key" android:textColor="@color/atlas_text_primary" />
-        <EditText android:id="@+id/inputGoogleWeatherKey" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:background="@drawable/atlas_section_bg" android:padding="12dp" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="@string/settings_amap_key" android:textColor="@color/atlas_text_primary" />
+        <EditText android:id="@+id/inputAmapKey" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:background="@drawable/atlas_section_bg" android:padding="12dp" />
 
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:text="@string/settings_output_path" android:textColor="@color/atlas_text_primary" />
         <TextView android:id="@+id/txtOutputPath" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textColor="@color/atlas_text_secondary" />

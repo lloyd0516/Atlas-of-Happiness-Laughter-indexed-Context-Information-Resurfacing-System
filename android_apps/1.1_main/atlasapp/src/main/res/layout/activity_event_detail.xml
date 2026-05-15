@@ -22,7 +22,10 @@
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="@string/label_location" android:textColor="@color/atlas_text_secondary" />
         <TextView android:id="@+id/txtGps" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:background="@drawable/atlas_section_bg" android:padding="12dp" android:textColor="@color/atlas_text_primary" />
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="@string/label_weather" android:textColor="@color/atlas_text_secondary" />
-        <TextView android:id="@+id/txtWeather" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:background="@drawable/atlas_section_bg" android:padding="12dp" android:textColor="@color/atlas_text_primary" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:background="@drawable/atlas_section_bg" android:gravity="center_vertical" android:orientation="horizontal" android:padding="12dp">
+            <ImageView android:id="@+id/imgWeatherIcon" android:layout_width="32dp" android:layout_height="32dp" android:src="@drawable/ic_atlas_weather" />
+            <TextView android:id="@+id/txtWeather" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginLeft="10dp" android:layout_weight="1" android:textColor="@color/atlas_text_primary" />
+        </LinearLayout>
         <Button android:id="@+id/btnRefreshContext" android:layout_width="match_parent" android:layout_height="48dp" android:layout_marginTop="10dp" android:background="@drawable/atlas_button_soft" android:text="@string/btn_refresh" android:textAllCaps="false" android:textColor="@color/atlas_text_primary" />
 
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:text="@string/event_detail_reflection" android:textColor="@color/atlas_text_primary" android:textStyle="bold" />

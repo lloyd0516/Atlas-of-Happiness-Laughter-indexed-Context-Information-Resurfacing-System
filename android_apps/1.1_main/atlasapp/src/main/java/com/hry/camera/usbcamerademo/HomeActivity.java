@@ -81,12 +81,14 @@ public class HomeActivity extends AppCompatActivity {
             body.setText(event.eventId);
             StringBuilder metaText = new StringBuilder();
             metaText.append(getString(R.string.label_period)).append(": ").append(event.periodCount)
-                    .append("  •  media: ").append(event.mediaCount);
+                    .append("  •  ").append(getString(R.string.label_media_count)).append(": ").append(event.mediaCount);
             if (event.weather != null && event.weather.length() > 0) {
                 metaText.append("  •  ").append(event.weather);
             }
             meta.setText(metaText.toString());
-            icon.setImageResource(R.drawable.ic_atlas_event);
+            icon.setImageResource(event.weather != null && event.weather.length() > 0
+                    ? AtlasWeatherIconMapper.drawableForKey(event.weatherIconKey)
+                    : R.drawable.ic_atlas_event);
 
             card.setOnClickListener(new View.OnClickListener() {
                 @Override

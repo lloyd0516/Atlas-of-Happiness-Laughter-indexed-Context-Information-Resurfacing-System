@@ -43,12 +43,14 @@
     <string name="settings_logs">Developer logs</string>
     <string name="settings_logs_caption">Speechmatics timestamps, detection edges, engine info, and auto capture actions.</string>
     <string name="settings_api">Optional API info</string>
-    <string name="settings_api_caption">Google Maps Platform keys can be wired for Maps SDK for Android and Weather API.</string>
+    <string name="settings_api_caption">Google Maps Platform can power map rendering; AMap Web Service provides event location and weather context.</string>
     <string name="settings_speechmatics_key">Speechmatics API key</string>
     <string name="settings_speechmatics_rt_url">Speechmatics realtime URL</string>
-    <string name="settings_google_weather_key">Google Weather API key</string>
+    <string name="settings_amap_key">AMap Web Service API key</string>
     <string name="settings_google_maps_key_needed">Google Maps Android key is build-time only and must be provided before packaging.</string>
     <string name="maps_key_missing">Google Maps key missing. Map list still works; SDK map will appear after rebuilding with a valid key.</string>
+    <string name="maps_key_ready">Google Maps SDK key injected at build time.</string>
+    <string name="amap_key_missing">AMap Web Service key missing. Events remain available in the list.</string>
     <string name="settings_output_path">Mirrored config path:</string>
     <string name="level_frequent">Frequent</string>
     <string name="level_medium">Medium</string>
@@ -100,6 +102,10 @@
     <string name="status_running">Joyful: running</string>
     <string name="label_weather">Weather</string>
     <string name="label_location">Location</string>
+    <string name="label_gps_coordinates">GPS</string>
+    <string name="label_location_accuracy">Accuracy</string>
+    <string name="unit_meter_short">m</string>
+    <string name="label_media_count">Media</string>
     <string name="label_recording">Recording</string>
     <string name="label_no_media">No media</string>
     <string name="label_audio">Audio</string>

@@ -39,7 +39,7 @@ public class SettingsActivity extends AppCompatActivity {
     private EditText outputRootInput;
     private EditText speechmaticsKeyInput;
     private EditText speechmaticsRtUrlInput;
-    private EditText googleWeatherKeyInput;
+    private EditText amapKeyInput;
     private RadioButton radioSystem;
     private RadioButton radioEn;
     private RadioButton radioZh;
@@ -67,7 +67,7 @@ public class SettingsActivity extends AppCompatActivity {
         outputRootInput = findViewById(R.id.inputOutputRoot);
         speechmaticsKeyInput = findViewById(R.id.inputSpeechmaticsKey);
         speechmaticsRtUrlInput = findViewById(R.id.inputSpeechmaticsRtUrl);
-        googleWeatherKeyInput = findViewById(R.id.inputGoogleWeatherKey);
+        amapKeyInput = findViewById(R.id.inputAmapKey);
         radioSystem = findViewById(R.id.radioLangSystem);
         radioEn = findViewById(R.id.radioLangEn);
         radioZh = findViewById(R.id.radioLangZh);
@@ -203,7 +203,7 @@ public class SettingsActivity extends AppCompatActivity {
         outputRootInput.addTextChangedListener(watcher);
         speechmaticsKeyInput.addTextChangedListener(watcher);
         speechmaticsRtUrlInput.addTextChangedListener(watcher);
-        googleWeatherKeyInput.addTextChangedListener(watcher);
+        amapKeyInput.addTextChangedListener(watcher);
     }
 
     private void populateUi() {
@@ -224,10 +224,10 @@ public class SettingsActivity extends AppCompatActivity {
         outputRootInput.setText(config.outputRoot);
         speechmaticsKeyInput.setText(JoyfulMomentConfig.getSpeechmaticsApiKey(this));
         speechmaticsRtUrlInput.setText(JoyfulMomentConfig.getSpeechmaticsRtUrl(this));
-        googleWeatherKeyInput.setText(repository.getGoogleWeatherApiKey());
+        amapKeyInput.setText(repository.getAmapApiKey());
         mapsKeyHintView.setText(BuildConfig.GOOGLE_MAPS_API_KEY == null || BuildConfig.GOOGLE_MAPS_API_KEY.trim().length() == 0
                 ? getString(R.string.maps_key_missing)
-                : "Google Maps SDK key injected at build time.");
+                : getString(R.string.maps_key_ready));
 
         String language = AtlasLocaleManager.getSavedLanguage(this);
         radioSystem.setChecked(AtlasLocaleManager.LANGUAGE_SYSTEM.equals(language));
@@ -293,7 +293,7 @@ public class SettingsActivity extends AppCompatActivity {
         repository.saveCameraBrightnessPercent(getSliderValue("camera_brightness"));
         JoyfulMomentConfig.saveSpeechmaticsApiKey(this, speechmaticsKeyInput.getText().toString().trim());
         JoyfulMomentConfig.saveSpeechmaticsRtUrl(this, speechmaticsRtUrlInput.getText().toString().trim());
-        repository.saveGoogleWeatherApiKey(googleWeatherKeyInput.getText().toString().trim());
+        repository.saveAmapApiKey(amapKeyInput.getText().toString().trim());
 
         String language = radioZh.isChecked() ? AtlasLocaleManager.LANGUAGE_ZH
                 : radioEn.isChecked() ? AtlasLocaleManager.LANGUAGE_EN

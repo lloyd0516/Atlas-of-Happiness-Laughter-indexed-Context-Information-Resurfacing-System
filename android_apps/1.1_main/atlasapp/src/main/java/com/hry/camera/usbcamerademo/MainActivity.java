@@ -31,6 +31,7 @@ import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
+import android.widget.FrameLayout;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
@@ -70,7 +71,7 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
     // 注意:
     // 通过设定VIDEO_ORIENTATION=0,90,180,270，以及设定screenOrientation为横屏或竖屏，并配合硬件模组的摆放方向，来决定成像方向
 
-    private static final int VIDEO_ORIENTATION = USBCameraAPI.ROTATION_270;
+    private static final int VIDEO_ORIENTATION = USBCameraAPI.ROTATION_0;
     private static final int VIDEO_MINFPS = 0;
     private static final int VIDEO_MAXFPS = 30;
     private static final float VIDEO_BANDWIDTH = 1.0f;    // 0.0 ~1.0f
@@ -122,6 +123,12 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
 
         // 界面控件初始化
         mSurfaceView = (SurfaceView)findViewById(R.id.surfaceView);
+        mSurfaceView.post(new Runnable() {
+            @Override
+            public void run() {
+                updatePreviewSurfaceLayout(VIDEO_H, VIDEO_W);
+            }
+        });
 
         mSurfaceHolder = mSurfaceView.getHolder();
         mSurfaceHolder.addCallback(mSurfaceHolderCallback);
@@ -275,7 +282,7 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
 
         @Override
         public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-
+            updatePreviewSurfaceLayout(getDisplayPreviewWidth(), getDisplayPreviewHeight());
         }
 
         @Override
@@ -397,6 +404,7 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
 
                 case MSG_CAMERA_OPENED:
                     mJoyfulAutoOpenInFlight = false;
+                    updatePreviewSurfaceLayout(getDisplayPreviewWidth(), getDisplayPreviewHeight());
                     refreshPreviewUi();
                     Toast.makeText(MainActivity.this,
                             mManualPreviewRequested ? "USB camera preview opened" : "USB camera ready for joyful auto capture",
@@ -561,6 +569,7 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
 
     private void refreshPreviewUi() {
         boolean showPreview = mManualPreviewRequested && mCameraThread != null && mCameraThread.isOpen();
+        updatePreviewSurfaceLayout(getDisplayPreviewWidth(), getDisplayPreviewHeight());
         if (mPreviewBtn != null) {
             mPreviewBtn.setText(showPreview ? R.string.btn_preview_stop : R.string.btn_preview_start);
         }
@@ -569,6 +578,43 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
             if (!showPreview) {
                 mPreviewTip.setText(R.string.preview_tip);
             }
+        }
+    }
+
+    private int getDisplayPreviewWidth() {
+        return mCameraThread != null && mCameraThread.isOpen() ? mCameraThread.getNewVideoW() : VIDEO_H;
+    }
+
+    private int getDisplayPreviewHeight() {
+        return mCameraThread != null && mCameraThread.isOpen() ? mCameraThread.getNewVideoH() : VIDEO_W;
+    }
+
+    private void updatePreviewSurfaceLayout(int sourceWidth, int sourceHeight) {
+        if (mSurfaceView == null) {
+            return;
+        }
+        View parent = (View) mSurfaceView.getParent();
+        if (parent == null || parent.getWidth() <= 0 || parent.getHeight() <= 0 || sourceWidth <= 0 || sourceHeight <= 0) {
+            return;
+        }
+        int availableWidth = Math.max(1, parent.getWidth() - parent.getPaddingLeft() - parent.getPaddingRight());
+        int availableHeight = Math.max(1, parent.getHeight() - parent.getPaddingTop() - parent.getPaddingBottom());
+        float sourceAspect = (float) sourceWidth / (float) sourceHeight;
+        int targetWidth = availableWidth;
+        int targetHeight = Math.round(targetWidth / sourceAspect);
+        if (targetHeight > availableHeight) {
+            targetHeight = availableHeight;
+            targetWidth = Math.round(targetHeight * sourceAspect);
+        }
+        FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) mSurfaceView.getLayoutParams();
+        if (params.width != targetWidth || params.height != targetHeight) {
+            params.width = targetWidth;
+            params.height = targetHeight;
+            params.gravity = android.view.Gravity.CENTER;
+            mSurfaceView.setLayoutParams(params);
+        }
+        if (mSurfaceHolder != null) {
+            mSurfaceHolder.setFixedSize(sourceWidth, sourceHeight);
         }
     }
 

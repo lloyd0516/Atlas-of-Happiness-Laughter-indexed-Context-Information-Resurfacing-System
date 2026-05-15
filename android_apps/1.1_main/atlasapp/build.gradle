@@ -1,5 +1,17 @@
 apply plugin: 'com.android.application'
 
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withInputStream { stream ->
+        localProperties.load(stream)
+    }
+}
+
+def configString = { value ->
+    "\"${(value ?: '').replace('\\', '\\\\').replace('"', '\\"')}\""
+}
+
 android {
     compileSdkVersion 28
     defaultConfig {
@@ -13,11 +25,18 @@ android {
         def speechmaticsApiKey = System.getenv("SPEECHMATICS_API_KEY") ?: ""
         def speechmaticsRtUrl = System.getenv("SPEECHMATICS_RT_URL") ?: "wss://eu2.rt.speechmatics.com/v2"
         def googleMapsApiKey = System.getenv("GOOGLE_MAPS_API_KEY") ?: ""
-        def googleWeatherApiKey = System.getenv("GOOGLE_WEATHER_API_KEY") ?: ""
-        buildConfigField "String", "SPEECHMATICS_API_KEY", "\"${speechmaticsApiKey}\""
-        buildConfigField "String", "SPEECHMATICS_RT_URL", "\"${speechmaticsRtUrl}\""
-        buildConfigField "String", "GOOGLE_MAPS_API_KEY", "\"${googleMapsApiKey}\""
-        buildConfigField "String", "GOOGLE_WEATHER_API_KEY", "\"${googleWeatherApiKey}\""
+        def amapApiKey = localProperties.getProperty("amap.api.key")
+                ?: System.getenv("AMAP_API_KEY")
+                ?: ""
+        def openWeatherApiKey = localProperties.getProperty("openweather.api.key")
+                ?: System.getenv("OPENWEATHER_API_KEY")
+                ?: System.getenv("GOOGLE_WEATHER_API_KEY")
+                ?: ""
+        buildConfigField "String", "SPEECHMATICS_API_KEY", configString(speechmaticsApiKey)
+        buildConfigField "String", "SPEECHMATICS_RT_URL", configString(speechmaticsRtUrl)
+        buildConfigField "String", "GOOGLE_MAPS_API_KEY", configString(googleMapsApiKey)
+        buildConfigField "String", "AMAP_API_KEY", configString(amapApiKey)
+        buildConfigField "String", "OPENWEATHER_API_KEY", configString(openWeatherApiKey)
     }
     buildTypes {
         release {

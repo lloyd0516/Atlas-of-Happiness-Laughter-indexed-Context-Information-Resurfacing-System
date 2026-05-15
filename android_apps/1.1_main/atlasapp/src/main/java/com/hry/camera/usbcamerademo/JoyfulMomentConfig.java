@@ -22,7 +22,9 @@ public class JoyfulMomentConfig {
     public static final String PREF_CAMERA_BRIGHTNESS = "camera_brightness";
     public static final String PREF_SPEECHMATICS_API_KEY = "speechmatics_api_key";
     public static final String PREF_SPEECHMATICS_RT_URL = "speechmatics_rt_url";
-    public static final String PREF_GOOGLE_WEATHER_API_KEY = "google_weather_api_key";
+    public static final String PREF_AMAP_API_KEY = "amap_api_key";
+    public static final String PREF_OPENWEATHER_API_KEY = "openweather_api_key";
+    private static final String PREF_LEGACY_GOOGLE_WEATHER_API_KEY = "google_weather_api_key";
 
     public String detectionLevel = LEVEL_MEDIUM;
     public int chunkMs = 200;
@@ -218,14 +220,35 @@ public class JoyfulMomentConfig {
         prefs.edit().putString(PREF_SPEECHMATICS_RT_URL, value == null ? "" : value.trim()).apply();
     }
 
-    public static String getGoogleWeatherApiKey(Context context) {
+    public static String getAmapApiKey(Context context) {
         SharedPreferences prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
-        String saved = prefs.getString(PREF_GOOGLE_WEATHER_API_KEY, "");
-        return saved != null && saved.trim().length() > 0 ? saved.trim() : BuildConfig.GOOGLE_WEATHER_API_KEY;
+        String saved = prefs.getString(PREF_AMAP_API_KEY, "");
+        return saved != null && saved.trim().length() > 0 ? saved.trim() : BuildConfig.AMAP_API_KEY;
     }
 
-    public static void saveGoogleWeatherApiKey(Context context, String value) {
+    public static void saveAmapApiKey(Context context, String value) {
         SharedPreferences prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
-        prefs.edit().putString(PREF_GOOGLE_WEATHER_API_KEY, value == null ? "" : value.trim()).apply();
+        prefs.edit().putString(PREF_AMAP_API_KEY, value == null ? "" : value.trim()).apply();
+    }
+
+    public static String getOpenWeatherApiKey(Context context) {
+        SharedPreferences prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+        String saved = prefs.getString(PREF_OPENWEATHER_API_KEY, "");
+        if (saved != null && saved.trim().length() > 0) {
+            return saved.trim();
+        }
+        String legacy = prefs.getString(PREF_LEGACY_GOOGLE_WEATHER_API_KEY, "");
+        if (legacy != null && legacy.trim().length() > 0) {
+            return legacy.trim();
+        }
+        return BuildConfig.OPENWEATHER_API_KEY;
+    }
+
+    public static void saveOpenWeatherApiKey(Context context, String value) {
+        SharedPreferences prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+        prefs.edit()
+                .putString(PREF_OPENWEATHER_API_KEY, value == null ? "" : value.trim())
+                .remove(PREF_LEGACY_GOOGLE_WEATHER_API_KEY)
+                .apply();
     }
 }

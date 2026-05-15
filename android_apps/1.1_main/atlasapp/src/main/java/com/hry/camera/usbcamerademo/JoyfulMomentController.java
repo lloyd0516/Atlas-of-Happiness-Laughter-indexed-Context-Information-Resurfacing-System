@@ -510,6 +510,7 @@ public class JoyfulMomentController {
         eventStore.writeJson(new File(sessionDir, currentOpenEvent.eventId + ".json"), safeJson(currentOpenEvent));
 
         final String finalEventId = currentOpenEvent.eventId;
+        refreshContextForFinalizedEvent(finalEventId);
         mainHandler.post(new Runnable() {
             @Override
             public void run() {
@@ -518,6 +519,41 @@ public class JoyfulMomentController {
         });
         currentOpenEvent = null;
         currentEventLastDetectionStartSec = -1.0;
+    }
+
+    private void refreshContextForFinalizedEvent(final String eventId) {
+        final AtlasReviewRepository repository = new AtlasReviewRepository(context);
+        AtlasContextResolver.refreshContext(context, repository, new AtlasContextResolver.Callback() {
+            @Override
+            public void onResolved(Double lat, Double lng, Double amapLat, Double amapLng, Float accuracyMeters, Long timestampMs, String locationName, String adcode, String weatherCondition, Double temperature) {
+                JSONObject eventJson = repository.loadEventById(eventId);
+                boolean saved = eventJson != null && repository.updateDerivedContext(eventJson, lat, lng, amapLat, amapLng, accuracyMeters, timestampMs, locationName, adcode, weatherCondition, temperature);
+                JSONObject status = new JSONObject();
+                try {
+                    status.put("type", "context.auto_resolved");
+                    status.put("event_id", eventId);
+                    status.put("saved", saved);
+                    status.put("has_location", lat != null && lng != null);
+                    status.put("has_address", locationName != null && locationName.length() > 0);
+                    status.put("has_weather", weatherCondition != null && weatherCondition.length() > 0);
+                    status.put("adcode", adcode);
+                } catch (JSONException ignored) {
+                }
+                appendJson("detection_log.jsonl", status);
+            }
+
+            @Override
+            public void onFailed(String reason) {
+                JSONObject status = new JSONObject();
+                try {
+                    status.put("type", "context.auto_resolve_failed");
+                    status.put("event_id", eventId);
+                    status.put("reason", reason);
+                } catch (JSONException ignored) {
+                }
+                appendJson("detection_log.jsonl", status);
+            }
+        });
     }
 
     private void triggerAutomationForDetectionIfNewClip(JoyfulMomentClusterer.DetectionRecord record, String eventId) {

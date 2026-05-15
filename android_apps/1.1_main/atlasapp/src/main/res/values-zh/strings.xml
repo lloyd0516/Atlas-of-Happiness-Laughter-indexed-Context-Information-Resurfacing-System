@@ -43,12 +43,14 @@
     <string name="settings_logs">开发日志</string>
     <string name="settings_logs_caption">包含 Speechmatics 原始时间戳、检测边界、引擎信息与自动采集动作。</string>
     <string name="settings_api">可选 API 信息</string>
-    <string name="settings_api_caption">可接入 Google Maps Platform 的 Maps SDK for Android 与 Weather API。</string>
+    <string name="settings_api_caption">Google Maps Platform 用于地图渲染；高德 Web 服务用于事件位置与天气上下文。</string>
     <string name="settings_speechmatics_key">Speechmatics API Key</string>
     <string name="settings_speechmatics_rt_url">Speechmatics 实时 URL</string>
-    <string name="settings_google_weather_key">Google Weather API Key</string>
+    <string name="settings_amap_key">高德 Web 服务 API Key</string>
     <string name="settings_google_maps_key_needed">Google Maps Android key 需要在打包前注入，不能仅在应用内动态填写。</string>
     <string name="maps_key_missing">当前缺少 Google Maps key。列表回看可用，重打包并注入有效 key 后会显示 SDK 地图。</string>
+    <string name="maps_key_ready">Google Maps SDK key 已在构建时注入。</string>
+    <string name="amap_key_missing">当前缺少高德 Web 服务 key。事件列表仍可正常回看。</string>
     <string name="settings_output_path">镜像 config 路径：</string>
     <string name="level_frequent">Frequent</string>
     <string name="level_medium">Medium</string>
@@ -100,6 +102,10 @@
     <string name="status_running">Joyful：运行中</string>
     <string name="label_weather">天气</string>
     <string name="label_location">位置</string>
+    <string name="label_gps_coordinates">GPS 坐标</string>
+    <string name="label_location_accuracy">定位精度</string>
+    <string name="unit_meter_short">米</string>
+    <string name="label_media_count">媒体</string>
     <string name="label_recording">录制中</string>
     <string name="label_no_media">暂无媒体</string>
     <string name="label_audio">音频</string>

@@ -36,7 +36,12 @@ public class AtlasReviewRepository {
         public int mediaCount;
         public Double lat;
         public Double lng;
+        public Double amapLat;
+        public Double amapLng;
+        public Float accuracyMeters;
+        public String locationName;
         public String weather;
+        public String weatherIconKey;
         public String timeRangeText;
     }
 
@@ -105,10 +110,19 @@ public class AtlasReviewRepository {
                     if (gps != null && gps.has("lat") && gps.has("lng")) {
                         summary.lat = gps.optDouble("lat");
                         summary.lng = gps.optDouble("lng");
+                        if (gps.has("amap_lat") && gps.has("amap_lng")) {
+                            summary.amapLat = gps.optDouble("amap_lat");
+                            summary.amapLng = gps.optDouble("amap_lng");
+                        }
+                        if (gps.has("accuracy_m")) {
+                            summary.accuracyMeters = (float) gps.optDouble("accuracy_m");
+                        }
+                        summary.locationName = gps.optString("address", "");
                     }
                     JSONObject weather = derived != null ? derived.optJSONObject("weather") : null;
                     if (weather != null) {
                         summary.weather = weather.optString("condition", "");
+                        summary.weatherIconKey = weather.optString("icon_key", AtlasWeatherIconMapper.keyForCondition(summary.weather));
                     }
                     summary.timeRangeText = formatTimeRange(summary.startTimeMs, summary.endTimeMs);
                     result.add(summary);
@@ -207,7 +221,7 @@ public class AtlasReviewRepository {
         return appendUserMedia(event, "photos", path, source);
     }
 
-    public boolean updateDerivedContext(JSONObject event, Double lat, Double lng, Long timestampMs, String weatherCondition, Double temperature) {
+    public boolean updateDerivedContext(JSONObject event, Double lat, Double lng, Double amapLat, Double amapLng, Float accuracyMeters, Long timestampMs, String locationName, String adcode, String weatherCondition, Double temperature) {
         if (event == null) {
             return false;
         }
@@ -220,21 +234,49 @@ public class AtlasReviewRepository {
             if (lng != null) {
                 gps.put("lng", lng);
             }
+            if (amapLat != null) {
+                gps.put("amap_lat", amapLat);
+            }
+            if (amapLng != null) {
+                gps.put("amap_lng", amapLng);
+            }
+            if (accuracyMeters != null) {
+                gps.put("accuracy_m", accuracyMeters);
+            }
             if (timestampMs != null) {
                 gps.put("timestamp", isoFormat.format(new Date(timestampMs)));
                 gps.put("timestamp_ms", timestampMs);
             }
+            if (!TextUtils.isEmpty(locationName)) {
+                gps.put("address", locationName);
+            }
+            if (!TextUtils.isEmpty(adcode)) {
+                gps.put("adcode", adcode);
+            }
             JSONObject weather = ensureObject(derived, "weather");
             if (!TextUtils.isEmpty(weatherCondition)) {
                 weather.put("condition", weatherCondition);
+                weather.put("icon_key", AtlasWeatherIconMapper.keyForCondition(weatherCondition));
             }
             if (temperature != null) {
                 weather.put("temperature", temperature);
             }
+            if (!TextUtils.isEmpty(adcode)) {
+                weather.put("adcode", adcode);
+            }
+            weather.put("provider", "amap");
             return saveEvent(event);
         } catch (JSONException ignored) {
             return false;
         }
+    }
+
+    public String getAmapApiKey() {
+        return JoyfulMomentConfig.getAmapApiKey(context);
+    }
+
+    public void saveAmapApiKey(String key) {
+        JoyfulMomentConfig.saveAmapApiKey(context, key);
     }
 
     public List<LogItem> loadMergedLogs() {
@@ -275,12 +317,12 @@ public class AtlasReviewRepository {
         prefs.edit().putInt(JoyfulMomentConfig.PREF_CAMERA_BRIGHTNESS, percent).apply();
     }
 
-    public String getGoogleWeatherApiKey() {
-        return JoyfulMomentConfig.getGoogleWeatherApiKey(context);
+    public String getOpenWeatherApiKey() {
+        return JoyfulMomentConfig.getOpenWeatherApiKey(context);
     }
 
-    public void saveGoogleWeatherApiKey(String key) {
-        JoyfulMomentConfig.saveGoogleWeatherApiKey(context, key);
+    public void saveOpenWeatherApiKey(String key) {
+        JoyfulMomentConfig.saveOpenWeatherApiKey(context, key);
     }
 
     public String formatTimeRange(long startMs, long endMs) {
