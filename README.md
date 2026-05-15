@@ -61,33 +61,7 @@ detection-level -> event-level
 
 ---
 
-## Android 构建
 
-当前工程使用较旧但已验证可用的 Android 构建栈：
-
-```text
-Gradle wrapper: 4.10.1
-Android Gradle Plugin: 3.2.1
-compileSdkVersion: 28
-targetSdkVersion: 28
-```
-
-建议使用 JDK 8 构建：
-
-```powershell
-cd android_apps/1.1_main
-$env:JAVA_HOME='C:\Program Files\Eclipse Adoptium\jdk-8.0.482.8-hotspot'
-$env:Path="$env:JAVA_HOME\bin;$env:Path"
-.\gradlew.bat :atlasapp:assembleDebug
-```
-
-APK 输出：
-
-```text
-android_apps/1.1_main/atlasapp/build/outputs/apk/debug/atlasapp-debug.apk
-```
-
----
 
 ## API Key 配置
 
@@ -115,14 +89,4 @@ speechmatics_demo/README.md
 
 ---
 
-## 未纳入/不建议纳入 GitHub 的本地内容
 
-本地 workspace 中可能存在大规模数据、实验输出、手机日志和第三方研究代码目录。这些内容不属于当前发布版本，通常不应上传：
-
-```text
-datasets_unified/
-phone_runs/
-run_logs/
-output/
-server_sync/
-```

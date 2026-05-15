@@ -1,6 +1,5 @@
 # Android Apps
 
-本目录用于整理当前项目的两版 Android App 独立工程，方便分别维护、构建、安装和说明。
 
 ## 目录说明
 
@@ -49,31 +48,7 @@ Detection -> Period -> Event
 
 ---
 
-## API / 服务状态
 
-### 已接入
-
-- Speechmatics Realtime API
-  - 用于 laughter detection
-  - 0.0 和 1.0 均使用
-
-### 已预留但未完成
-
-- Google Maps API
-  - 1.0 中已有地图回看模块入口
-  - 目前仍缺正式 key 和最终接入配置
-
-- Google Weather API
-  - 1.0 中 context weather 已留接口
-  - 目前仍缺正式 key
-
-### 当前缺失信息
-
-- Google Maps key
-- Google Weather key
-- release signing / keystore 信息
-
----
 
 ## Joyful config 参数说明
 
@@ -147,19 +122,7 @@ Android 1.0 的 Joyful settings 页面，参数设计对齐以下配置文件：
 
 ## 工程使用方法
 
-### 环境准备
 
-建议准备：
-
-- Android Studio
-- JDK 8
-- Android SDK
-
-每个独立工程目录下都提供了：
-
-- `local.properties.example`
-
-可复制为 `local.properties` 后使用。
 
 ### 建议环境变量
 
