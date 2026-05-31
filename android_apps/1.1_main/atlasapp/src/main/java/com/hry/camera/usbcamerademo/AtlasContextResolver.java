@@ -54,92 +54,180 @@ public class AtlasContextResolver {
                         callback.onFailed("location_unavailable");
                         return;
                     }
-                    double amapLat = best.getLatitude();
-                    double amapLng = best.getLongitude();
-                    Double temperature = null;
-                    String condition = null;
-                    String address = null;
-                    String adcode = null;
-                    String apiKey = repository.getAmapApiKey();
-                    if (!TextUtils.isEmpty(apiKey)) {
-                        try {
-                            OkHttpClient client = new OkHttpClient.Builder().build();
-                            double[] converted = convertGpsToAmap(client, apiKey, best.getLatitude(), best.getLongitude());
-                            if (converted != null) {
-                                amapLat = converted[0];
-                                amapLng = converted[1];
-                            }
-                            HttpUrl regeoUrl = HttpUrl.parse("https://restapi.amap.com/v3/geocode/regeo").newBuilder()
-                                    .addQueryParameter("key", apiKey)
-                                    .addQueryParameter("location", String.format(Locale.US, "%.6f,%.6f", amapLng, amapLat))
-                                    .addQueryParameter("extensions", "base")
-                                    .addQueryParameter("output", "JSON")
-                                    .build();
-                            Request regeoRequest = new Request.Builder().url(regeoUrl).build();
-                            Response response = client.newCall(regeoRequest).execute();
-                            try {
-                                if (response.isSuccessful() && response.body() != null) {
-                                    String body = response.body().string();
-                                    JSONObject json = new JSONObject(body);
-                                    if ("1".equals(json.optString("status"))) {
-                                        JSONObject regeo = json.optJSONObject("regeocode");
-                                        if (regeo != null) {
-                                            address = regeo.optString("formatted_address", null);
-                                            JSONObject addressComponent = regeo.optJSONObject("addressComponent");
-                                            if (addressComponent != null) {
-                                                adcode = addressComponent.optString("adcode", null);
-                                            }
-                                        }
-                                    }
-                                }
-                            } finally {
-                                if (response.body() != null) {
-                                    response.body().close();
-                                }
-                            }
-                            if (!TextUtils.isEmpty(adcode)) {
-                                HttpUrl weatherUrl = HttpUrl.parse("https://restapi.amap.com/v3/weather/weatherInfo").newBuilder()
-                                        .addQueryParameter("key", apiKey)
-                                        .addQueryParameter("city", adcode)
-                                        .addQueryParameter("extensions", "base")
-                                        .addQueryParameter("output", "JSON")
-                                        .build();
-                                Request weatherRequest = new Request.Builder().url(weatherUrl).build();
-                                Response weatherResponse = client.newCall(weatherRequest).execute();
-                                try {
-                                    if (weatherResponse.isSuccessful() && weatherResponse.body() != null) {
-                                        String body = weatherResponse.body().string();
-                                        JSONObject json = new JSONObject(body);
-                                        if ("1".equals(json.optString("status"))) {
-                                            JSONArray lives = json.optJSONArray("lives");
-                                            JSONObject live = lives != null && lives.length() > 0 ? lives.optJSONObject(0) : null;
-                                            if (live != null) {
-                                                condition = live.optString("weather", null);
-                                                String tempText = live.optString("temperature", null);
-                                                if (!TextUtils.isEmpty(tempText)) {
-                                                    try {
-                                                        temperature = Double.parseDouble(tempText);
-                                                    } catch (NumberFormatException ignored) {
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                } finally {
-                                    if (weatherResponse.body() != null) {
-                                        weatherResponse.body().close();
-                                    }
-                                }
-                            }
-                        } catch (Exception ignored) {
-                        }
-                    }
-                    callback.onResolved(best.getLatitude(), best.getLongitude(), amapLat, amapLng, best.hasAccuracy() ? best.getAccuracy() : null, best.getTime(), address, adcode, condition, temperature);
+                    resolveKnownCoordinates(
+                            repository,
+                            best.getLatitude(),
+                            best.getLongitude(),
+                            null,
+                            null,
+                            best.hasAccuracy() ? best.getAccuracy() : null,
+                            best.getTime(),
+                            null,
+                            null,
+                            callback
+                    );
                 } catch (Exception e) {
                     callback.onFailed(e.getMessage());
                 }
             }
         }, "AtlasContextResolver").start();
+    }
+
+    public static void refreshContextForEvent(final AtlasReviewRepository repository, final JSONObject event, final Callback callback) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    JSONObject derived = event == null ? null : event.optJSONObject("derived_context");
+                    JSONObject gps = derived == null ? null : derived.optJSONObject("gps");
+                    if (gps == null || !gps.has("lat") || !gps.has("lng")) {
+                        callback.onFailed("event_location_missing");
+                        return;
+                    }
+                    resolveKnownCoordinates(
+                            repository,
+                            gps.optDouble("lat"),
+                            gps.optDouble("lng"),
+                            gps.has("amap_lat") ? gps.optDouble("amap_lat") : null,
+                            gps.has("amap_lng") ? gps.optDouble("amap_lng") : null,
+                            gps.has("accuracy_m") ? (float) gps.optDouble("accuracy_m") : null,
+                            gps.has("timestamp_ms") ? gps.optLong("timestamp_ms") : null,
+                            gps.optString("address", null),
+                            gps.optString("adcode", null),
+                            callback
+                    );
+                } catch (Exception e) {
+                    callback.onFailed(e.getMessage());
+                }
+            }
+        }, "AtlasContextResolverEvent").start();
+    }
+
+    private static void resolveKnownCoordinates(
+            AtlasReviewRepository repository,
+            double lat,
+            double lng,
+            Double existingAmapLat,
+            Double existingAmapLng,
+            Float accuracyMeters,
+            Long timestampMs,
+            String existingAddress,
+            String existingAdcode,
+            Callback callback
+    ) {
+        double amapLat = existingAmapLat != null ? existingAmapLat : lat;
+        double amapLng = existingAmapLng != null ? existingAmapLng : lng;
+        Double temperature = null;
+        String condition = null;
+        String address = existingAddress;
+        String adcode = existingAdcode;
+        String apiKey = repository.getAmapApiKey();
+        if (!TextUtils.isEmpty(apiKey)) {
+            OkHttpClient client = new OkHttpClient.Builder().build();
+            if (existingAmapLat == null || existingAmapLng == null) {
+                double[] converted = convertGpsToAmap(client, apiKey, lat, lng);
+                if (converted != null) {
+                    amapLat = converted[0];
+                    amapLng = converted[1];
+                }
+            }
+            RegeoResult regeo = reverseGeocode(client, apiKey, amapLat, amapLng);
+            if (regeo != null) {
+                if (!TextUtils.isEmpty(regeo.address)) {
+                    address = regeo.address;
+                }
+                if (!TextUtils.isEmpty(regeo.adcode)) {
+                    adcode = regeo.adcode;
+                }
+            }
+            WeatherResult weather = fetchWeather(client, apiKey, adcode);
+            if (weather != null) {
+                condition = weather.condition;
+                temperature = weather.temperature;
+            }
+        }
+        callback.onResolved(lat, lng, amapLat, amapLng, accuracyMeters, timestampMs, address, adcode, condition, temperature);
+    }
+
+    private static RegeoResult reverseGeocode(OkHttpClient client, String apiKey, double amapLat, double amapLng) {
+        Response response = null;
+        try {
+            HttpUrl regeoUrl = HttpUrl.parse("https://restapi.amap.com/v3/geocode/regeo").newBuilder()
+                    .addQueryParameter("key", apiKey)
+                    .addQueryParameter("location", String.format(Locale.US, "%.6f,%.6f", amapLng, amapLat))
+                    .addQueryParameter("extensions", "base")
+                    .addQueryParameter("output", "JSON")
+                    .build();
+            response = client.newCall(new Request.Builder().url(regeoUrl).build()).execute();
+            if (!response.isSuccessful() || response.body() == null) {
+                return null;
+            }
+            JSONObject json = new JSONObject(response.body().string());
+            if (!"1".equals(json.optString("status"))) {
+                return null;
+            }
+            JSONObject regeo = json.optJSONObject("regeocode");
+            if (regeo == null) {
+                return null;
+            }
+            RegeoResult result = new RegeoResult();
+            result.address = regeo.optString("formatted_address", null);
+            JSONObject addressComponent = regeo.optJSONObject("addressComponent");
+            if (addressComponent != null) {
+                result.adcode = addressComponent.optString("adcode", null);
+            }
+            return result;
+        } catch (Exception ignored) {
+            return null;
+        } finally {
+            if (response != null && response.body() != null) {
+                response.body().close();
+            }
+        }
+    }
+
+    private static WeatherResult fetchWeather(OkHttpClient client, String apiKey, String adcode) {
+        if (TextUtils.isEmpty(adcode)) {
+            return null;
+        }
+        Response response = null;
+        try {
+            HttpUrl weatherUrl = HttpUrl.parse("https://restapi.amap.com/v3/weather/weatherInfo").newBuilder()
+                    .addQueryParameter("key", apiKey)
+                    .addQueryParameter("city", adcode)
+                    .addQueryParameter("extensions", "base")
+                    .addQueryParameter("output", "JSON")
+                    .build();
+            response = client.newCall(new Request.Builder().url(weatherUrl).build()).execute();
+            if (!response.isSuccessful() || response.body() == null) {
+                return null;
+            }
+            JSONObject json = new JSONObject(response.body().string());
+            if (!"1".equals(json.optString("status"))) {
+                return null;
+            }
+            JSONArray lives = json.optJSONArray("lives");
+            JSONObject live = lives != null && lives.length() > 0 ? lives.optJSONObject(0) : null;
+            if (live == null) {
+                return null;
+            }
+            WeatherResult result = new WeatherResult();
+            result.condition = live.optString("weather", null);
+            String tempText = live.optString("temperature", null);
+            if (!TextUtils.isEmpty(tempText)) {
+                try {
+                    result.temperature = Double.parseDouble(tempText);
+                } catch (NumberFormatException ignored) {
+                }
+            }
+            return result;
+        } catch (Exception ignored) {
+            return null;
+        } finally {
+            if (response != null && response.body() != null) {
+                response.body().close();
+            }
+        }
     }
 
     private static Location findBestLastKnownLocation(LocationManager manager) {
@@ -158,13 +246,10 @@ public class AtlasContextResolver {
     private static Location requestFreshLocation(final LocationManager manager) {
         final Location[] result = new Location[1];
         final CountDownLatch latch = new CountDownLatch(1);
-        Criteria criteria = new Criteria();
-        criteria.setAccuracy(Criteria.ACCURACY_FINE);
-        criteria.setPowerRequirement(Criteria.POWER_MEDIUM);
         final LocationListener listener = new LocationListener() {
             @Override
             public void onLocationChanged(Location location) {
-                result[0] = location;
+                result[0] = chooseBetterLocation(result[0], location);
                 latch.countDown();
             }
 
@@ -181,8 +266,24 @@ public class AtlasContextResolver {
             }
         };
         try {
-            manager.requestSingleUpdate(criteria, listener, Looper.getMainLooper());
-            latch.await(3500L, TimeUnit.MILLISECONDS);
+            List<String> providers = manager.getProviders(true);
+            boolean requested = false;
+            if (providers != null) {
+                for (String provider : providers) {
+                    try {
+                        manager.requestSingleUpdate(provider, listener, Looper.getMainLooper());
+                        requested = true;
+                    } catch (Exception ignored) {
+                    }
+                }
+            }
+            if (!requested) {
+                Criteria criteria = new Criteria();
+                criteria.setAccuracy(Criteria.ACCURACY_FINE);
+                criteria.setPowerRequirement(Criteria.POWER_MEDIUM);
+                manager.requestSingleUpdate(criteria, listener, Looper.getMainLooper());
+            }
+            latch.await(10000L, TimeUnit.MILLISECONDS);
         } catch (Exception ignored) {
         } finally {
             try {
@@ -246,5 +347,15 @@ public class AtlasContextResolver {
                 response.body().close();
             }
         }
+    }
+
+    private static class RegeoResult {
+        String address;
+        String adcode;
+    }
+
+    private static class WeatherResult {
+        String condition;
+        Double temperature;
     }
 }

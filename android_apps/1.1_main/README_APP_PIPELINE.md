@@ -46,8 +46,9 @@ App 目录：`android_apps/1.1_main`
    - event 结束条件包括：超过 600s 无新 laughter、下一个 detection gap 超阈值、用户停止 session、engine stop。
 
 6. **上下文 `.wav` 保存**
-   - App 仍按 30s 保存 local WAV clip。
-   - laughter 所在 clip 会保存为 laughter clip。
+   - App 仍按 30s 写入 local tmp WAV clip，作为可抽取的录音缓存。
+   - accepted laughter 会保存 Speechmatics `[start, end]` 外扩后的 `[start - 2.5s, end + 2.5s]` WAV。
+   - 若外扩范围越过实际录音边界，则裁剪到实际已录制的开始/结束时间。
    - 临近 speech context clip 可保存为 possible related speech context。
    - 这些 `.wav` 会挂到 event JSON 的 `saved_clip_paths`，并在 Review UI 中展示。
 
@@ -292,7 +293,7 @@ event finalized 的原因可能是：
 
 ## 6. `.wav` context/laughter 保存逻辑
 
-虽然 period 层已移除，但 App 保留 30s WAV clip 机制。
+虽然 period 层已移除，但 App 保留 30s WAV tmp clip 机制，用于后续从原始录音中抽取 laughter/context 音频。
 
 默认：
 
@@ -305,14 +306,14 @@ clip 分类：
 
 | label | 含义 |
 |---|---|
-| `laughter` | 该 30s clip 中包含 accepted laughter detection |
+| `laughter` | accepted laughter detection 对应的 `[start - 2.5s, end + 2.5s]` 音频窗口 |
 | `possible_related_speech_context` | laughter clip 附近的 speech context clip |
 | `none` | 不保存 |
 
 保存路径示例：
 
 ```text
-session_xxx/clips/clip_000000_laughter.wav
+session_xxx/clips/clip_000000_laughter_det_000001.wav
 session_xxx/clips/clip_000001_possible_related_speech_context.wav
 ```
 

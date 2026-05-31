@@ -25,6 +25,7 @@ public class JoyfulMomentConfig {
     public static final String PREF_AMAP_API_KEY = "amap_api_key";
     public static final String PREF_OPENWEATHER_API_KEY = "openweather_api_key";
     private static final String PREF_LEGACY_GOOGLE_WEATHER_API_KEY = "google_weather_api_key";
+    private static final String LEGACY_SPEECHMATICS_API_KEY = "sBccf1uWZEqz8Yn6VZJMsAeyB6u0YSH4";
 
     public String detectionLevel = LEVEL_MEDIUM;
     public int chunkMs = 200;
@@ -201,7 +202,14 @@ public class JoyfulMomentConfig {
     public static String getSpeechmaticsApiKey(Context context) {
         SharedPreferences prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
         String saved = prefs.getString(PREF_SPEECHMATICS_API_KEY, "");
-        return saved != null && saved.trim().length() > 0 ? saved.trim() : BuildConfig.SPEECHMATICS_API_KEY;
+        if (saved != null && saved.trim().length() > 0) {
+            String trimmed = saved.trim();
+            if (!LEGACY_SPEECHMATICS_API_KEY.equals(trimmed)) {
+                return trimmed;
+            }
+            prefs.edit().remove(PREF_SPEECHMATICS_API_KEY).apply();
+        }
+        return BuildConfig.SPEECHMATICS_API_KEY;
     }
 
     public static void saveSpeechmaticsApiKey(Context context, String value) {

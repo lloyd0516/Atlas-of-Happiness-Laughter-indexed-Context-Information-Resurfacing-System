@@ -40,6 +40,7 @@ public class SettingsActivity extends AppCompatActivity {
     private EditText speechmaticsKeyInput;
     private EditText speechmaticsRtUrlInput;
     private EditText amapKeyInput;
+    private EditText openweatherKeyInput;
     private RadioButton radioSystem;
     private RadioButton radioEn;
     private RadioButton radioZh;
@@ -68,6 +69,7 @@ public class SettingsActivity extends AppCompatActivity {
         speechmaticsKeyInput = findViewById(R.id.inputSpeechmaticsKey);
         speechmaticsRtUrlInput = findViewById(R.id.inputSpeechmaticsRtUrl);
         amapKeyInput = findViewById(R.id.inputAmapKey);
+        openweatherKeyInput = findViewById(R.id.inputOpenweatherKey);
         radioSystem = findViewById(R.id.radioLangSystem);
         radioEn = findViewById(R.id.radioLangEn);
         radioZh = findViewById(R.id.radioLangZh);
@@ -204,6 +206,7 @@ public class SettingsActivity extends AppCompatActivity {
         speechmaticsKeyInput.addTextChangedListener(watcher);
         speechmaticsRtUrlInput.addTextChangedListener(watcher);
         amapKeyInput.addTextChangedListener(watcher);
+        openweatherKeyInput.addTextChangedListener(watcher);
     }
 
     private void populateUi() {
@@ -225,7 +228,8 @@ public class SettingsActivity extends AppCompatActivity {
         speechmaticsKeyInput.setText(JoyfulMomentConfig.getSpeechmaticsApiKey(this));
         speechmaticsRtUrlInput.setText(JoyfulMomentConfig.getSpeechmaticsRtUrl(this));
         amapKeyInput.setText(repository.getAmapApiKey());
-        mapsKeyHintView.setText(BuildConfig.GOOGLE_MAPS_API_KEY == null || BuildConfig.GOOGLE_MAPS_API_KEY.trim().length() == 0
+        openweatherKeyInput.setText(repository.getOpenWeatherApiKey());
+        mapsKeyHintView.setText(JoyfulMomentConfig.getAmapApiKey(this) == null || JoyfulMomentConfig.getAmapApiKey(this).trim().length() == 0
                 ? getString(R.string.maps_key_missing)
                 : getString(R.string.maps_key_ready));
 
@@ -294,6 +298,7 @@ public class SettingsActivity extends AppCompatActivity {
         JoyfulMomentConfig.saveSpeechmaticsApiKey(this, speechmaticsKeyInput.getText().toString().trim());
         JoyfulMomentConfig.saveSpeechmaticsRtUrl(this, speechmaticsRtUrlInput.getText().toString().trim());
         repository.saveAmapApiKey(amapKeyInput.getText().toString().trim());
+        repository.saveOpenWeatherApiKey(openweatherKeyInput.getText().toString().trim());
 
         String language = radioZh.isChecked() ? AtlasLocaleManager.LANGUAGE_ZH
                 : radioEn.isChecked() ? AtlasLocaleManager.LANGUAGE_EN

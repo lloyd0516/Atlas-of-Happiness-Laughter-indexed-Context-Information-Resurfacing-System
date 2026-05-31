@@ -95,6 +95,7 @@ public class HomeActivity extends AppCompatActivity {
                 public void onClick(View v) {
                     Intent intent = new Intent(HomeActivity.this, EventDetailActivity.class);
                     intent.putExtra("event_id", event.eventId);
+                    intent.putExtra("session_id", event.sessionId);
                     startActivity(intent);
                 }
             });

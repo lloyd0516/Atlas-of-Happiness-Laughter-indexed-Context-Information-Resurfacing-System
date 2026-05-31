@@ -207,6 +207,12 @@ public class MapReviewActivity extends AppCompatActivity {
     private void openEvent(String eventId) {
         Intent intent = new Intent(this, EventDetailActivity.class);
         intent.putExtra("event_id", eventId);
+        for (AtlasReviewRepository.EventSummary event : currentLocatedEvents) {
+            if (eventId.equals(event.eventId)) {
+                intent.putExtra("session_id", event.sessionId);
+                break;
+            }
+        }
         startActivity(intent);
     }
 }

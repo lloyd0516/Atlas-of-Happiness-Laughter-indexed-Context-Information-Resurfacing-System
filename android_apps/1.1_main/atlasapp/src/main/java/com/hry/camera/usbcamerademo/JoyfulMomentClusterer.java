@@ -81,6 +81,8 @@ public class JoyfulMomentClusterer {
     public static class EventRecord {
         public String eventId;
         public int eventIndex;
+        public String participantNumber;
+        public int participantEventNumber;
         public long deviceStartMs;
         public long deviceEndMs;
         public double startSec;
@@ -102,6 +104,8 @@ public class JoyfulMomentClusterer {
             json.put("type", "event.layer");
             json.put("event_id", eventId);
             json.put("event_index", eventIndex);
+            json.put("participant_number", participantNumber == null ? "" : participantNumber);
+            json.put("participant_event_number", participantEventNumber);
             json.put("device_start_ms", deviceStartMs);
             json.put("device_end_ms", deviceEndMs);
             json.put("start_sec", startSec);
@@ -161,9 +165,11 @@ public class JoyfulMomentClusterer {
         return record;
     }
 
-    public EventRecord buildEvent(long sessionStartMs, int eventIndex, double startSec, double endSec) {
+    public EventRecord buildEvent(long sessionStartMs, int eventIndex, String participantNumber, int participantEventNumber, double startSec, double endSec) {
         EventRecord record = new EventRecord();
-        record.eventId = String.format(Locale.US, "event_%04d", eventIndex);
+        record.participantNumber = participantNumber == null ? "00" : participantNumber;
+        record.participantEventNumber = participantEventNumber;
+        record.eventId = String.format(Locale.US, "%s_event_%d", record.participantNumber, participantEventNumber);
         record.eventIndex = eventIndex;
         record.startSec = startSec;
         record.endSec = endSec;

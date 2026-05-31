@@ -22,15 +22,21 @@ android {
         versionName "1.1-main"
         vectorDrawables.useSupportLibrary = true
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
-        def speechmaticsApiKey = System.getenv("SPEECHMATICS_API_KEY") ?: ""
-        def speechmaticsRtUrl = System.getenv("SPEECHMATICS_RT_URL") ?: "wss://eu2.rt.speechmatics.com/v2"
-        def googleMapsApiKey = System.getenv("GOOGLE_MAPS_API_KEY") ?: ""
-        def amapApiKey = localProperties.getProperty("amap.api.key")
-                ?: System.getenv("AMAP_API_KEY")
+        def speechmaticsApiKey = System.getenv("SPEECHMATICS_API_KEY") 
+                ?: localProperties.getProperty("speechmatics.api.key")
                 ?: ""
-        def openWeatherApiKey = localProperties.getProperty("openweather.api.key")
-                ?: System.getenv("OPENWEATHER_API_KEY")
+        def speechmaticsRtUrl = System.getenv("SPEECHMATICS_RT_URL") 
+                ?: localProperties.getProperty("speechmatics.api.url")
+                ?: "wss://eu2.rt.speechmatics.com/v2"
+        def googleMapsApiKey = System.getenv("GOOGLE_MAPS_API_KEY") 
+                ?: localProperties.getProperty("google.maps.api.key")
+                ?: ""
+        def amapApiKey = System.getenv("AMAP_API_KEY") 
+                ?: localProperties.getProperty("amap.api.key")
+                ?: ""
+        def openWeatherApiKey = System.getenv("OPENWEATHER_API_KEY") 
                 ?: System.getenv("GOOGLE_WEATHER_API_KEY")
+                ?: localProperties.getProperty("openweather.api.key")
                 ?: ""
         buildConfigField "String", "SPEECHMATICS_API_KEY", configString(speechmaticsApiKey)
         buildConfigField "String", "SPEECHMATICS_RT_URL", configString(speechmaticsRtUrl)

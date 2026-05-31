@@ -107,8 +107,12 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
     JoyfulMomentController mJoyfulController;
     private boolean mJoyfulAutoRecording = false;
     private boolean mLastRecordWasJoyfulAuto = false;
+    private String mActiveJoyfulAutoVideoEventId = null;
+    private String mPendingJoyfulAutoVideoEventId = null;
     private int mPendingJoyfulAutoPhotos = 0;
     private int mQueuedJoyfulAutoPhotos = 0;
+    private final ArrayList<String> mPendingJoyfulAutoPhotoEventIds = new ArrayList<>();
+    private final ArrayList<String> mQueuedJoyfulAutoPhotoEventIds = new ArrayList<>();
     private int mPendingJoyfulAutoVideoDurationSec = 0;
     private boolean mManualPreviewRequested = false;
     private boolean mCameraOpenedForAutoOnly = false;
@@ -640,11 +644,18 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
             mJoyfulController.onAutoVideoCaptureSkipped(reason);
         }
         mPendingJoyfulAutoVideoDurationSec = 0;
+        mPendingJoyfulAutoVideoEventId = null;
+        mActiveJoyfulAutoVideoEventId = null;
         while (mQueuedJoyfulAutoPhotos > 0) {
             if (mJoyfulController != null) {
                 mJoyfulController.onAutoPhotoCaptureSkipped(reason);
             }
             mQueuedJoyfulAutoPhotos -= 1;
+        }
+        mQueuedJoyfulAutoPhotoEventIds.clear();
+        synchronized (this) {
+            mPendingJoyfulAutoPhotoEventIds.clear();
+            mPendingJoyfulAutoPhotos = 0;
         }
     }
 
@@ -674,6 +685,8 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
             int durationSec = mPendingJoyfulAutoVideoDurationSec;
             mPendingJoyfulAutoVideoDurationSec = 0;
             mJoyfulAutoRecording = true;
+            mActiveJoyfulAutoVideoEventId = mPendingJoyfulAutoVideoEventId;
+            mPendingJoyfulAutoVideoEventId = null;
             if (mJoyfulController != null) {
                 mJoyfulController.onAutoVideoCaptureStarted();
             }
@@ -684,6 +697,7 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
                 mHandler.sendEmptyMessageDelayed(MSG_JOYFUL_AUTO_STOP_RECORD, durationSec * 1000L);
             } else {
                 mJoyfulAutoRecording = false;
+                mActiveJoyfulAutoVideoEventId = null;
                 if (mJoyfulController != null) {
                     mJoyfulController.onAutoVideoCaptureSkipped("record_start_failed");
                 }
@@ -691,8 +705,13 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
         }
 
         while (mQueuedJoyfulAutoPhotos > 0 && mCameraThread.isOpen()) {
+            String targetEventId = null;
+            if (!mQueuedJoyfulAutoPhotoEventIds.isEmpty()) {
+                targetEventId = mQueuedJoyfulAutoPhotoEventIds.remove(0);
+            }
             synchronized (this) {
                 mPendingJoyfulAutoPhotos += 1;
+                mPendingJoyfulAutoPhotoEventIds.add(targetEventId);
             }
             mQueuedJoyfulAutoPhotos -= 1;
             mCameraThread.stillCapture(mPictureCallback);
@@ -882,7 +901,7 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
                   // 显示提示消息
                   Toast.makeText(MainActivity.this, "视频已完成录制!", Toast.LENGTH_SHORT).show();
                   if (mLastRecordWasJoyfulAuto && mJoyfulController != null) {
-                      mJoyfulController.onAutoVideoSaved(mMediaVideoPath, uri != null ? uri.toString() : null);
+                      mJoyfulController.onAutoVideoSaved(mActiveJoyfulAutoVideoEventId, mMediaVideoPath, uri != null ? uri.toString() : null);
                       Toast.makeText(MainActivity.this, "Joyful auto video saved", Toast.LENGTH_SHORT).show();
                   }
               }
@@ -891,6 +910,7 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
               m_bIsRecording = false;
               mJoyfulAutoRecording = false;
               mLastRecordWasJoyfulAuto = false;
+              mActiveJoyfulAutoVideoEventId = null;
 
             this.mRecordBtn.setText("录像");
             maybeSleepJoyfulAutoCamera();
@@ -1131,9 +1151,9 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
             if (uri != null) {
 
                 mFileUtil.broadcastNewImage(MainActivity.this, uri);
-                final boolean joyfulAutoPhoto = consumePendingJoyfulAutoPhoto();
-                if (joyfulAutoPhoto && mJoyfulController != null) {
-                    mJoyfulController.onAutoPhotoSaved(path);
+                final String joyfulAutoPhotoEventId = consumePendingJoyfulAutoPhoto();
+                if (joyfulAutoPhotoEventId != null && mJoyfulController != null) {
+                    mJoyfulController.onAutoPhotoSaved(joyfulAutoPhotoEventId, path);
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
@@ -1234,13 +1254,61 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
             AtlasDevLogger.session(this, TAG, "Joyful session stopped by user");
             Toast.makeText(this, "Joyful session stopped", Toast.LENGTH_SHORT).show();
         } else {
-            AtlasForegroundService.startKeepAlive(this);
-            requestIgnoreBatteryOptimizationsIfNeeded();
-            mJoyfulController.startSession();
-            AtlasDevLogger.session(this, TAG, "Joyful session started by user; keepalive foreground service requested");
-            Toast.makeText(this, "Joyful session started", Toast.LENGTH_SHORT).show();
+            showJoyfulParticipantDialog();
         }
         updateJoyfulToggleButton();
+    }
+
+    private void showJoyfulParticipantDialog() {
+        final EditText input = new EditText(this);
+        input.setInputType(InputType.TYPE_CLASS_NUMBER);
+        input.setHint("00");
+        SharedPreferences prefs = getSharedPreferences(JoyfulMomentConfig.PREF_NAME, MODE_PRIVATE);
+        input.setText(prefs.getString("joyful_participant_number", "00"));
+        input.setSelectAllOnFocus(true);
+        new AlertDialog.Builder(this)
+                .setTitle("what's your number?")
+                .setView(input)
+                .setPositiveButton("Start", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        String participantNumber = normalizeParticipantNumber(input.getText().toString());
+                        getSharedPreferences(JoyfulMomentConfig.PREF_NAME, MODE_PRIVATE)
+                                .edit()
+                                .putString("joyful_participant_number", participantNumber)
+                                .apply();
+                        startJoyfulSession(participantNumber);
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void startJoyfulSession(String participantNumber) {
+        AtlasForegroundService.startKeepAlive(this);
+        requestIgnoreBatteryOptimizationsIfNeeded();
+        mJoyfulController.startSession(participantNumber);
+        AtlasDevLogger.session(this, TAG, "Joyful session started by user; participant=" + participantNumber + "; keepalive foreground service requested");
+        Toast.makeText(this, "Joyful session started: " + participantNumber, Toast.LENGTH_SHORT).show();
+        updateJoyfulToggleButton();
+    }
+
+    private String normalizeParticipantNumber(String raw) {
+        String value = raw == null ? "" : raw.trim();
+        StringBuilder digits = new StringBuilder();
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (Character.isDigit(c)) {
+                digits.append(c);
+            }
+        }
+        if (digits.length() == 0) {
+            return "00";
+        }
+        if (digits.length() == 1) {
+            return "0" + digits.toString();
+        }
+        return digits.toString();
     }
 
     private void requestIgnoreBatteryOptimizationsIfNeeded() {
@@ -1388,6 +1456,7 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
         } else {
             intent = new Intent(this, HomeActivity.class);
         }
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         startActivity(intent);
     }
 
@@ -1415,7 +1484,10 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
                     mHandler.sendEmptyMessageDelayed(MSG_JOYFUL_AUTO_STOP_RECORD, finalDurationSec * 1000L);
                     return;
                 }
-                mPendingJoyfulAutoVideoDurationSec = Math.max(mPendingJoyfulAutoVideoDurationSec, finalDurationSec);
+                if (finalDurationSec >= mPendingJoyfulAutoVideoDurationSec) {
+                    mPendingJoyfulAutoVideoDurationSec = finalDurationSec;
+                    mPendingJoyfulAutoVideoEventId = mJoyfulController != null ? mJoyfulController.getLastTriggeredEventId() : null;
+                }
                 ensureCameraReadyForJoyfulAuto();
             }
         });
@@ -1434,6 +1506,7 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
                     return;
                 }
                 mQueuedJoyfulAutoPhotos += 1;
+                mQueuedJoyfulAutoPhotoEventIds.add(mJoyfulController != null ? mJoyfulController.getLastTriggeredEventId() : null);
                 ensureCameraReadyForJoyfulAuto();
             }
         });
@@ -1451,12 +1524,15 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
         encoder.offerPcm(pcm16le, byteLen);
     }
 
-    private synchronized boolean consumePendingJoyfulAutoPhoto() {
+    private synchronized String consumePendingJoyfulAutoPhoto() {
         if (mPendingJoyfulAutoPhotos <= 0) {
-            return false;
+            return null;
         }
         mPendingJoyfulAutoPhotos -= 1;
-        return true;
+        if (mPendingJoyfulAutoPhotoEventIds.isEmpty()) {
+            return mJoyfulController != null ? mJoyfulController.getLastTriggeredEventId() : null;
+        }
+        return mPendingJoyfulAutoPhotoEventIds.remove(0);
     }
 
 

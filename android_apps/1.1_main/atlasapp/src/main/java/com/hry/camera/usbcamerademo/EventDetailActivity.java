@@ -47,6 +47,7 @@ public class EventDetailActivity extends AppCompatActivity {
     private AtlasReviewRepository repository;
     private JSONObject eventJson;
     private String eventId;
+    private String sessionId;
     private String selectedPeriodId;
     private TextView headerTime;
     private LinearLayout timelineContainer;
@@ -75,7 +76,8 @@ public class EventDetailActivity extends AppCompatActivity {
         AtlasDevLogger.session(this, TAG, AtlasDevLogger.buildSessionBanner("EventDetailActivity.onCreate"));
         repository = new AtlasReviewRepository(this);
         eventId = getIntent().getStringExtra("event_id");
-        eventJson = repository.loadEventById(eventId);
+        sessionId = getIntent().getStringExtra("session_id");
+        eventJson = repository.loadEventById(sessionId, eventId);
         if (eventJson == null) {
             Toast.makeText(this, R.string.toast_no_event, Toast.LENGTH_SHORT).show();
             finish();
@@ -128,6 +130,10 @@ public class EventDetailActivity extends AppCompatActivity {
         });
 
         renderEvent();
+    }
+
+    private void reloadEvent() {
+        eventJson = repository.loadEventById(sessionId, eventId);
     }
 
     @Override
@@ -492,7 +498,7 @@ public class EventDetailActivity extends AppCompatActivity {
         if (repository.addTextNote(eventJson, text, "post_edit")) {
             noteInput.setText("");
             Toast.makeText(this, R.string.toast_saved, Toast.LENGTH_SHORT).show();
-            eventJson = repository.loadEventById(eventId);
+            reloadEvent();
             renderUserGenerated();
         }
     }
@@ -544,7 +550,7 @@ public class EventDetailActivity extends AppCompatActivity {
         if (persist && activeAudioPath != null) {
             boolean saved = repository.addAudioNote(eventJson, activeAudioPath, "post_edit");
             devInfo("audio note stopped: persist=" + persist + ", saved=" + saved + ", path=" + activeAudioPath);
-            eventJson = repository.loadEventById(eventId);
+            reloadEvent();
             renderUserGenerated();
             Toast.makeText(this, R.string.toast_audio_recording_stopped, Toast.LENGTH_SHORT).show();
         } else {
@@ -592,7 +598,8 @@ public class EventDetailActivity extends AppCompatActivity {
                     @Override
                     public void run() {
                         repository.updateDerivedContext(eventJson, lat, lng, amapLat, amapLng, accuracyMeters, timestampMs, locationName, adcode, weatherCondition, temperature);
-                        eventJson = repository.loadEventById(eventId);
+                        reloadEvent();
+                        repository.backfillMissingContextFromNearby(eventJson, 6L * 60L * 60L * 1000L);
                         renderContext();
                     }
                 });
@@ -662,7 +669,7 @@ public class EventDetailActivity extends AppCompatActivity {
         try {
             boolean saved = repository.addPhotoNote(eventJson, file.getAbsolutePath(), "post_edit");
             devInfo("photo note saved=" + saved + ", path=" + file.getAbsolutePath() + ", size=" + file.length());
-            eventJson = repository.loadEventById(eventId);
+            reloadEvent();
             renderUserGenerated();
             previewMedia(new JSONObject().put("photo_path", file.getAbsolutePath()), file.getAbsolutePath());
             Toast.makeText(this, R.string.toast_photo_saved, Toast.LENGTH_SHORT).show();

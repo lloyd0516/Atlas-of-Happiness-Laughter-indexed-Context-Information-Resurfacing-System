@@ -8,15 +8,21 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 
 public class JoyfulMomentController {
+    private static final int CONTEXT_AUTO_MAX_ATTEMPTS = 18;
+    private static final long CONTEXT_NEARBY_BACKFILL_WINDOW_MS = 6L * 60L * 60L * 1000L;
+    private static final double LAUGHTER_AUDIO_PADDING_SEC = 2.5;
+
     public interface HostCallbacks {
         void onJoyfulStatusChanged(String text);
         void onJoyfulPromptRequested(String periodId);
@@ -42,6 +48,7 @@ public class JoyfulMomentController {
         boolean hasSpeech;
         boolean finalized;
         final List<String> detectionIds = new ArrayList<>();
+        final List<JoyfulMomentClusterer.DetectionRecord> laughterDetections = new ArrayList<>();
         final List<Integer> relatedLaughterClipIds = new ArrayList<>();
         JoyfulMomentClusterer.PeriodRecord periodRecord;
     }
@@ -56,6 +63,7 @@ public class JoyfulMomentController {
     private JoyfulMomentRealtimeEngine realtimeEngine;
 
     private String sessionId;
+    private String participantNumber = "00";
     private long sessionStartMs;
     private File sessionDir;
     private boolean sessionRunning;
@@ -65,11 +73,13 @@ public class JoyfulMomentController {
     private final ArrayList<JoyfulMomentClusterer.DetectionRecord> detectionRecords = new ArrayList<>();
     private final ArrayList<JoyfulMomentClusterer.PeriodRecord> periodRecords = new ArrayList<>(); // legacy internal list; no longer emitted as an aggregation level
     private final HashMap<Integer, JoyfulMomentClusterer.EventRecord> eventRecords = new HashMap<>();
+    private final HashSet<String> contextResolveRequestedEventIds = new HashSet<>();
     private JoyfulMomentClusterer.EventRecord currentOpenEvent;
     private double currentEventLastDetectionStartSec = -1.0;
     private Runnable pendingEventFinalizeRunnable;
     private int nextDetectionNumber = 1;
     private int nextEventNumber = 0;
+    private int nextParticipantEventNumber = 1;
     private int latestClosedClipId = -1;
     private String lastTriggeredPeriodId;
     private String lastTriggeredEventId;
@@ -99,9 +109,14 @@ public class JoyfulMomentController {
     }
 
     public synchronized void startSession() {
+        startSession("00");
+    }
+
+    public synchronized void startSession(String requestedParticipantNumber) {
         if (sessionRunning) {
             return;
         }
+        participantNumber = normalizeParticipantNumber(requestedParticipantNumber);
         sessionId = eventStore.newSessionId();
         sessionDir = eventStore.createSessionDir(sessionId);
         sessionStartMs = System.currentTimeMillis();
@@ -113,9 +128,11 @@ public class JoyfulMomentController {
         detectionRecords.clear();
         periodRecords.clear();
         eventRecords.clear();
+        contextResolveRequestedEventIds.clear();
         currentOpenEvent = null;
         currentEventLastDetectionStartSec = -1.0;
         nextEventNumber = 0;
+        nextParticipantEventNumber = computeNextParticipantEventNumber(participantNumber);
         cancelPendingEventFinalize();
         lastTriggeredPeriodId = null;
         lastTriggeredEventId = null;
@@ -330,10 +347,9 @@ public class JoyfulMomentController {
     private synchronized void handleClipClosed(int clipId, double startSec, double endSec, File tmpPath) {
         ClipState clipState = ensureClipState(clipId, startSec, endSec, tmpPath);
         clipState.tmpPath = tmpPath;
+        clipState.startSec = startSec;
+        clipState.endSec = endSec;
         latestClosedClipId = Math.max(latestClosedClipId, clipId);
-        if (clipState.hasLaughter) {
-            finalizeClipIfReady(clipState, true);
-        }
         finalizeRemainingClips(false);
     }
 
@@ -355,6 +371,9 @@ public class JoyfulMomentController {
                 clipState.hasLaughter = true;
                 if (!clipState.detectionIds.contains(record.detId)) {
                     clipState.detectionIds.add(record.detId);
+                }
+                if (!containsDetection(clipState.laughterDetections, record.detId)) {
+                    clipState.laughterDetections.add(record);
                 }
             }
         }
@@ -386,7 +405,7 @@ public class JoyfulMomentController {
             if (!forceAll && clipId > latestClosedClipId - config.contextNeighborClips && !clipState.hasLaughter) {
                 continue;
             }
-            finalizeClipIfReady(clipState, forceAll || clipState.hasLaughter);
+            finalizeClipIfReady(clipState, forceAll);
         }
     }
 
@@ -414,30 +433,137 @@ public class JoyfulMomentController {
         } else if (!force && clipState.clipId > latestClosedClipId - config.contextNeighborClips) {
             return;
         }
+        if ("laughter".equals(label) && !force && !isLaughterWindowAvailable(clipState)) {
+            return;
+        }
 
-        String savedPath = null;
+        ArrayList<String> savedPaths = new ArrayList<>();
         if (!"none".equals(label) && clipState.tmpPath != null) {
             File clipsDir = new File(sessionDir, "clips");
             if (!clipsDir.exists()) {
                 clipsDir.mkdirs();
             }
-            File saved = new File(clipsDir, String.format(Locale.US, "clip_%06d_%s.wav", clipState.clipId, label));
-            if (clipState.tmpPath.exists()) {
-                //noinspection ResultOfMethodCallIgnored
-                clipState.tmpPath.renameTo(saved);
-                savedPath = saved.getAbsolutePath();
+            if ("laughter".equals(label)) {
+                savedPaths.addAll(saveLaughterWindows(clipState, clipsDir, force));
+            } else {
+                File saved = new File(clipsDir, String.format(Locale.US, "clip_%06d_%s.wav", clipState.clipId, label));
+                if (clipState.tmpPath.exists()) {
+                    //noinspection ResultOfMethodCallIgnored
+                    clipState.tmpPath.renameTo(saved);
+                    clipState.tmpPath = saved;
+                    savedPaths.add(saved.getAbsolutePath());
+                }
             }
-        } else if (clipState.tmpPath != null && clipState.tmpPath.exists()) {
-            //noinspection ResultOfMethodCallIgnored
-            clipState.tmpPath.delete();
         }
 
         clipState.finalized = true;
         if (!"none".equals(label)) {
-            attachClipToEvent(clipState, label, savedPath);
+            if (savedPaths.isEmpty()) {
+                attachClipToEvent(clipState, label, null);
+            } else {
+                for (String savedPath : savedPaths) {
+                    attachClipToEvent(clipState, label, savedPath);
+                }
+            }
         }
         writeSessionSummary("running");
         emitStatus(buildStatusText());
+    }
+
+    private boolean containsDetection(List<JoyfulMomentClusterer.DetectionRecord> records, String detId) {
+        for (JoyfulMomentClusterer.DetectionRecord record : records) {
+            if (record != null && detId != null && detId.equals(record.detId)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isLaughterWindowAvailable(ClipState clipState) {
+        double latestRecordedEndSec = latestClosedRecordingEndSec();
+        for (JoyfulMomentClusterer.DetectionRecord record : clipState.laughterDetections) {
+            if (record != null && record.endSec + LAUGHTER_AUDIO_PADDING_SEC > latestRecordedEndSec) {
+                return false;
+            }
+        }
+        return !clipState.laughterDetections.isEmpty();
+    }
+
+    private double latestClosedRecordingEndSec() {
+        double latestEndSec = 0.0;
+        for (ClipState state : clipStates.values()) {
+            if (state != null && state.tmpPath != null && state.tmpPath.exists()) {
+                latestEndSec = Math.max(latestEndSec, state.endSec);
+            }
+        }
+        return latestEndSec;
+    }
+
+    private ArrayList<String> saveLaughterWindows(ClipState clipState, File clipsDir, boolean force) {
+        ArrayList<String> savedPaths = new ArrayList<>();
+        double actualRecordingEndSec = latestClosedRecordingEndSec();
+        for (JoyfulMomentClusterer.DetectionRecord record : clipState.laughterDetections) {
+            if (record == null) {
+                continue;
+            }
+            double windowStartSec = Math.max(0.0, record.startSec - LAUGHTER_AUDIO_PADDING_SEC);
+            double requestedEndSec = Math.max(record.endSec, record.startSec) + LAUGHTER_AUDIO_PADDING_SEC;
+            double windowEndSec = force ? Math.min(requestedEndSec, actualRecordingEndSec) : requestedEndSec;
+            if (windowEndSec <= windowStartSec) {
+                continue;
+            }
+            ArrayList<JoyfulMomentWavClipWriter.SourceClip> sources = sourceClipsForWindow(windowStartSec, windowEndSec);
+            File saved = new File(clipsDir, String.format(Locale.US, "clip_%06d_%s_%s.wav", clipState.clipId, "laughter", record.detId));
+            try {
+                if (JoyfulMomentWavClipWriter.writeWindow(saved, sources, windowStartSec, windowEndSec)) {
+                    savedPaths.add(saved.getAbsolutePath());
+                    appendLaughterClipSaved(record, saved, windowStartSec, windowEndSec);
+                }
+            } catch (Exception e) {
+                appendLaughterClipSaveFailed(record, saved, e.getMessage());
+            }
+        }
+        return savedPaths;
+    }
+
+    private ArrayList<JoyfulMomentWavClipWriter.SourceClip> sourceClipsForWindow(double windowStartSec, double windowEndSec) {
+        ArrayList<JoyfulMomentWavClipWriter.SourceClip> sources = new ArrayList<>();
+        int startClipId = Math.max(0, (int) Math.floor(windowStartSec / Math.max(1, config.clipDurationSec)));
+        int endClipId = Math.max(startClipId, (int) Math.floor(Math.max(windowStartSec, windowEndSec - 0.001) / Math.max(1, config.clipDurationSec)));
+        for (int clipId = startClipId; clipId <= endClipId; clipId++) {
+            ClipState source = clipStates.get(clipId);
+            if (source != null && source.tmpPath != null && source.tmpPath.exists()) {
+                sources.add(new JoyfulMomentWavClipWriter.SourceClip(source.tmpPath, source.startSec, source.endSec));
+            }
+        }
+        return sources;
+    }
+
+    private void appendLaughterClipSaved(JoyfulMomentClusterer.DetectionRecord record, File saved, double windowStartSec, double windowEndSec) {
+        JSONObject json = new JSONObject();
+        try {
+            json.put("type", "audio.laughter_window.saved");
+            json.put("det_id", record.detId);
+            json.put("laughter_start_sec", record.startSec);
+            json.put("laughter_end_sec", record.endSec);
+            json.put("window_start_sec", windowStartSec);
+            json.put("window_end_sec", windowEndSec);
+            json.put("path", saved.getAbsolutePath());
+        } catch (JSONException ignored) {
+        }
+        appendJson("detection_log.jsonl", json);
+    }
+
+    private void appendLaughterClipSaveFailed(JoyfulMomentClusterer.DetectionRecord record, File saved, String reason) {
+        JSONObject json = new JSONObject();
+        try {
+            json.put("type", "audio.laughter_window.save_failed");
+            json.put("det_id", record == null ? JSONObject.NULL : record.detId);
+            json.put("path", saved == null ? JSONObject.NULL : saved.getAbsolutePath());
+            json.put("reason", reason);
+        } catch (JSONException ignored) {
+        }
+        appendJson("detection_log.jsonl", json);
     }
 
     private void assignDetectionToEvent(JoyfulMomentClusterer.DetectionRecord record) {
@@ -447,7 +573,7 @@ public class JoyfulMomentController {
             finalizeCurrentEvent("gap_exceeded");
         }
         if (currentOpenEvent == null || currentOpenEvent.finalized) {
-            currentOpenEvent = clusterer.buildEvent(sessionStartMs, nextEventNumber++, record.startSec, record.endSec);
+            currentOpenEvent = clusterer.buildEvent(sessionStartMs, nextEventNumber++, participantNumber, nextParticipantEventNumber++, record.startSec, record.endSec);
             eventRecords.put(currentOpenEvent.eventIndex, currentOpenEvent);
             currentEventLastDetectionStartSec = record.startSec;
         } else {
@@ -460,7 +586,8 @@ public class JoyfulMomentController {
         }
         lastTriggeredEventId = currentOpenEvent.eventId;
         appendJson("event_log.jsonl", safeJson(currentOpenEvent));
-        eventStore.writeJson(new File(sessionDir, currentOpenEvent.eventId + ".json"), safeJson(currentOpenEvent));
+        writeEventRecord(currentOpenEvent);
+        refreshContextForEventIfNeeded(currentOpenEvent.eventId);
         scheduleCurrentEventFinalize(currentOpenEvent.eventId);
         triggerAutomationForDetectionIfNewClip(record, currentOpenEvent.eventId);
     }
@@ -507,10 +634,10 @@ public class JoyfulMomentController {
         }
         appendJson("detection_log.jsonl", status);
         appendJson("event_log.jsonl", safeJson(currentOpenEvent));
-        eventStore.writeJson(new File(sessionDir, currentOpenEvent.eventId + ".json"), safeJson(currentOpenEvent));
+        writeEventRecord(currentOpenEvent);
 
         final String finalEventId = currentOpenEvent.eventId;
-        refreshContextForFinalizedEvent(finalEventId);
+        refreshContextForEventIfNeeded(finalEventId);
         mainHandler.post(new Runnable() {
             @Override
             public void run() {
@@ -522,17 +649,40 @@ public class JoyfulMomentController {
     }
 
     private void refreshContextForFinalizedEvent(final String eventId) {
+        refreshContextForFinalizedEvent(eventId, 1);
+    }
+
+    private void refreshContextForEventIfNeeded(final String eventId) {
+        if (eventId == null || contextResolveRequestedEventIds.contains(eventId)) {
+            return;
+        }
+        contextResolveRequestedEventIds.add(eventId);
+        refreshContextForFinalizedEvent(eventId, 1);
+    }
+
+    private void refreshContextForFinalizedEvent(final String eventId, final int attempt) {
         final AtlasReviewRepository repository = new AtlasReviewRepository(context);
-        AtlasContextResolver.refreshContext(context, repository, new AtlasContextResolver.Callback() {
+        JSONObject existingEvent = repository.loadEventById(eventId);
+        if (repository.hasUsefulDerivedContext(existingEvent)) {
+            appendContextStatus("context.auto_resolve_skipped_complete", eventId, attempt, null);
+            return;
+        }
+        AtlasContextResolver.Callback callback = new AtlasContextResolver.Callback() {
             @Override
             public void onResolved(Double lat, Double lng, Double amapLat, Double amapLng, Float accuracyMeters, Long timestampMs, String locationName, String adcode, String weatherCondition, Double temperature) {
                 JSONObject eventJson = repository.loadEventById(eventId);
                 boolean saved = eventJson != null && repository.updateDerivedContext(eventJson, lat, lng, amapLat, amapLng, accuracyMeters, timestampMs, locationName, adcode, weatherCondition, temperature);
+                JSONObject updatedEventJson = repository.loadEventById(eventId);
+                boolean complete = repository.hasUsefulDerivedContext(updatedEventJson);
+                int backfilled = complete ? repository.backfillMissingContextFromNearby(updatedEventJson, CONTEXT_NEARBY_BACKFILL_WINDOW_MS) : 0;
                 JSONObject status = new JSONObject();
                 try {
                     status.put("type", "context.auto_resolved");
                     status.put("event_id", eventId);
+                    status.put("attempt", attempt);
                     status.put("saved", saved);
+                    status.put("complete", complete);
+                    status.put("nearby_backfilled_count", backfilled);
                     status.put("has_location", lat != null && lng != null);
                     status.put("has_address", locationName != null && locationName.length() > 0);
                     status.put("has_weather", weatherCondition != null && weatherCondition.length() > 0);
@@ -540,6 +690,9 @@ public class JoyfulMomentController {
                 } catch (JSONException ignored) {
                 }
                 appendJson("detection_log.jsonl", status);
+                if (!complete) {
+                    scheduleContextRetry(eventId, attempt, "partial_context");
+                }
             }
 
             @Override
@@ -548,12 +701,96 @@ public class JoyfulMomentController {
                 try {
                     status.put("type", "context.auto_resolve_failed");
                     status.put("event_id", eventId);
+                    status.put("attempt", attempt);
                     status.put("reason", reason);
                 } catch (JSONException ignored) {
                 }
                 appendJson("detection_log.jsonl", status);
+                scheduleContextRetry(eventId, attempt, reason);
             }
-        });
+        };
+        if (hasEventLocation(existingEvent)) {
+            AtlasContextResolver.refreshContextForEvent(repository, existingEvent, callback);
+        } else {
+            AtlasContextResolver.refreshContext(context, repository, callback);
+        }
+    }
+
+    private void scheduleContextRetry(final String eventId, final int attempt, String reason) {
+        if (attempt >= CONTEXT_AUTO_MAX_ATTEMPTS) {
+            JSONObject status = new JSONObject();
+            try {
+                status.put("type", "context.auto_retry_exhausted");
+                status.put("event_id", eventId);
+                status.put("attempt", attempt);
+                status.put("reason", reason);
+            } catch (JSONException ignored) {
+            }
+            appendJson("detection_log.jsonl", status);
+            return;
+        }
+        long delayMs = contextRetryDelayMs(attempt + 1);
+        JSONObject status = new JSONObject();
+        try {
+            status.put("type", "context.auto_retry_scheduled");
+            status.put("event_id", eventId);
+            status.put("next_attempt", attempt + 1);
+            status.put("delay_ms", delayMs);
+            status.put("reason", reason);
+        } catch (JSONException ignored) {
+        }
+        appendJson("detection_log.jsonl", status);
+        mainHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                refreshContextForFinalizedEvent(eventId, attempt + 1);
+            }
+        }, delayMs);
+    }
+
+    private long contextRetryDelayMs(int attempt) {
+        if (attempt <= 2) {
+            return 15000L;
+        }
+        if (attempt == 3) {
+            return 45000L;
+        }
+        if (attempt == 4) {
+            return 120000L;
+        }
+        if (attempt == 5) {
+            return 300000L;
+        }
+        if (attempt <= 8) {
+            return 600000L;
+        }
+        if (attempt <= 12) {
+            return 900000L;
+        }
+        return 1800000L;
+    }
+
+    private boolean hasEventLocation(JSONObject eventJson) {
+        if (eventJson == null) {
+            return false;
+        }
+        JSONObject derived = eventJson.optJSONObject("derived_context");
+        JSONObject gps = derived != null ? derived.optJSONObject("gps") : null;
+        return gps != null && gps.has("lat") && gps.has("lng");
+    }
+
+    private void appendContextStatus(String type, String eventId, int attempt, String reason) {
+        JSONObject status = new JSONObject();
+        try {
+            status.put("type", type);
+            status.put("event_id", eventId);
+            status.put("attempt", attempt);
+            if (reason != null) {
+                status.put("reason", reason);
+            }
+        } catch (JSONException ignored) {
+        }
+        appendJson("detection_log.jsonl", status);
     }
 
     private void triggerAutomationForDetectionIfNewClip(JoyfulMomentClusterer.DetectionRecord record, String eventId) {
@@ -618,7 +855,7 @@ public class JoyfulMomentController {
             eventRecord.savedClipPaths.add(savedPath);
         }
         appendJson("event_log.jsonl", safeJson(eventRecord));
-        eventStore.writeJson(new File(sessionDir, eventRecord.eventId + ".json"), safeJson(eventRecord));
+        writeEventRecord(eventRecord);
     }
 
     private JoyfulMomentClusterer.EventRecord findEventForClip(ClipState clipState) {
@@ -717,15 +954,19 @@ public class JoyfulMomentController {
     }
 
     public synchronized void onAutoVideoSaved(String path, String contentUri) {
+        onAutoVideoSaved(lastTriggeredEventId, path, contentUri);
+    }
+
+    public synchronized void onAutoVideoSaved(String eventId, String path, String contentUri) {
         if (path == null) {
             appendAssetStatus("asset.auto_video.save_failed", "missing_path", null);
             return;
         }
-        String stablePath = copyAssetIntoSession(path, "videos", "event_video");
+        String stablePath = copyAssetIntoSession(eventId, path, "videos", "event_video");
         if (stablePath == null) {
             stablePath = path;
         }
-        JoyfulMomentClusterer.EventRecord eventRecord = findEventById(lastTriggeredEventId);
+        JoyfulMomentClusterer.EventRecord eventRecord = findEventById(eventId);
         if (eventRecord != null) {
             eventRecord.videoPath = stablePath;
             eventRecord.videoContentUri = contentUri;
@@ -734,30 +975,34 @@ public class JoyfulMomentController {
                 eventRecord.videoContentUris.add(contentUri);
             }
             appendJson("event_log.jsonl", safeJson(eventRecord));
-            eventStore.writeJson(new File(sessionDir, eventRecord.eventId + ".json"), safeJson(eventRecord));
+            writeEventRecord(eventRecord);
         }
-        appendAssetStatus("asset.auto_video.saved", "ok", stablePath);
+        appendAssetStatus("asset.auto_video.saved", eventId, "ok", stablePath);
     }
 
     public synchronized void onAutoPhotoSaved(String path) {
+        onAutoPhotoSaved(lastTriggeredEventId, path);
+    }
+
+    public synchronized void onAutoPhotoSaved(String eventId, String path) {
         if (path == null) {
             appendAssetStatus("asset.auto_photo.save_failed", "missing_path", null);
             return;
         }
-        String stablePath = copyAssetIntoSession(path, "photos", "event_photo");
+        String stablePath = copyAssetIntoSession(eventId, path, "photos", "event_photo");
         if (stablePath == null) {
             stablePath = path;
         }
-        JoyfulMomentClusterer.EventRecord eventRecord = findEventById(lastTriggeredEventId);
+        JoyfulMomentClusterer.EventRecord eventRecord = findEventById(eventId);
         if (eventRecord != null && !eventRecord.photoPaths.contains(stablePath)) {
             eventRecord.photoPaths.add(stablePath);
             appendJson("event_log.jsonl", safeJson(eventRecord));
-            eventStore.writeJson(new File(sessionDir, eventRecord.eventId + ".json"), safeJson(eventRecord));
+            writeEventRecord(eventRecord);
         }
-        appendAssetStatus("asset.auto_photo.saved", "ok", stablePath);
+        appendAssetStatus("asset.auto_photo.saved", eventId, "ok", stablePath);
     }
 
-    private String copyAssetIntoSession(String sourcePath, String folderName, String prefix) {
+    private String copyAssetIntoSession(String eventId, String sourcePath, String folderName, String prefix) {
         if (sessionDir == null || sourcePath == null) {
             return null;
         }
@@ -765,8 +1010,8 @@ public class JoyfulMomentController {
         if (!source.exists() || !source.isFile()) {
             return null;
         }
-        String eventId = lastTriggeredEventId != null ? lastTriggeredEventId : "unlinked";
-        File dstDir = new File(sessionDir, "captured_media/" + eventId + "/" + folderName);
+        String targetEventId = eventId != null ? eventId : "unlinked";
+        File dstDir = new File(sessionDir, "captured_media/" + targetEventId + "/" + folderName);
         if (!dstDir.exists()) {
             dstDir.mkdirs();
         }
@@ -807,10 +1052,14 @@ public class JoyfulMomentController {
     }
 
     private void appendAssetStatus(String type, String reason, String path) {
+        appendAssetStatus(type, lastTriggeredEventId, reason, path);
+    }
+
+    private void appendAssetStatus(String type, String eventId, String reason, String path) {
         JSONObject json = new JSONObject();
         try {
             json.put("type", type);
-            json.put("event_id", lastTriggeredEventId);
+            json.put("event_id", eventId);
             json.put("reason", reason);
             if (path != null) {
                 json.put("path", path);
@@ -851,6 +1100,51 @@ public class JoyfulMomentController {
         eventStore.appendJsonLine(new File(sessionDir, fileName), json);
     }
 
+    private void writeEventRecord(JoyfulMomentClusterer.EventRecord eventRecord) {
+        if (sessionDir == null || eventRecord == null || eventRecord.eventId == null) {
+            return;
+        }
+        File file = new File(sessionDir, eventRecord.eventId + ".json");
+        JSONObject json = safeJson(eventRecord);
+        JSONObject existing = readJsonFile(file);
+        try {
+            if (existing != null && existing.has("derived_context")) {
+                json.put("derived_context", existing.optJSONObject("derived_context"));
+            }
+            if (existing != null && existing.has("user_generated")) {
+                json.put("user_generated", existing.optJSONObject("user_generated"));
+            }
+        } catch (JSONException ignored) {
+        }
+        eventStore.writeJson(file, json);
+    }
+
+    private JSONObject readJsonFile(File file) {
+        if (file == null || !file.exists()) {
+            return null;
+        }
+        FileInputStream in = null;
+        try {
+            in = new FileInputStream(file);
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            byte[] buffer = new byte[4096];
+            int read;
+            while ((read = in.read(buffer)) != -1) {
+                out.write(buffer, 0, read);
+            }
+            return new JSONObject(out.toString("UTF-8"));
+        } catch (Exception ignored) {
+            return null;
+        } finally {
+            if (in != null) {
+                try {
+                    in.close();
+                } catch (Exception ignored) {
+                }
+            }
+        }
+    }
+
     private void writeSessionSummary(String state) {
         if (sessionDir == null) {
             return;
@@ -864,6 +1158,7 @@ public class JoyfulMomentController {
             json.put("detection_count", detectionRecords.size());
             json.put("aggregation_levels", "detection,event");
             json.put("event_gap_threshold_sec", config.eventWindowSec);
+            json.put("participant_number", participantNumber);
             json.put("confidence_threshold", config.laughterConfidenceThreshold());
             json.put("laughter_min_duration_sec", config.laughterMinDurationSec());
             json.put("event_count", eventRecords.size());
@@ -885,6 +1180,58 @@ public class JoyfulMomentController {
 
     public synchronized String getLastTriggeredEventId() {
         return lastTriggeredEventId;
+    }
+
+    private String normalizeParticipantNumber(String raw) {
+        String value = raw == null ? "" : raw.trim();
+        if (value.length() == 0) {
+            value = "00";
+        }
+        StringBuilder digits = new StringBuilder();
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (Character.isDigit(c)) {
+                digits.append(c);
+            }
+        }
+        if (digits.length() == 0) {
+            return "00";
+        }
+        if (digits.length() == 1) {
+            return "0" + digits.toString();
+        }
+        return digits.toString();
+    }
+
+    private int computeNextParticipantEventNumber(String participant) {
+        int max = 0;
+        File root = eventStore.getRootDir();
+        File[] sessions = root.listFiles();
+        if (sessions == null) {
+            return 1;
+        }
+        String prefix = participant + "_event_";
+        for (File session : sessions) {
+            if (session == null || !session.isDirectory()) {
+                continue;
+            }
+            File[] files = session.listFiles();
+            if (files == null) {
+                continue;
+            }
+            for (File file : files) {
+                String name = file.getName();
+                if (!name.startsWith(prefix) || !name.endsWith(".json")) {
+                    continue;
+                }
+                String numberText = name.substring(prefix.length(), name.length() - ".json".length());
+                try {
+                    max = Math.max(max, Integer.parseInt(numberText));
+                } catch (Exception ignored) {
+                }
+            }
+        }
+        return max + 1;
     }
 
     public synchronized String getLastTriggeredPeriodId() {

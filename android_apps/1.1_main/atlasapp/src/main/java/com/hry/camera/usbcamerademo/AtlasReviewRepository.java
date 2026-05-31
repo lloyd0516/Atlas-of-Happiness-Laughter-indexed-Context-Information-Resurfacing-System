@@ -87,7 +87,7 @@ public class AtlasReviewRepository {
                 continue;
             }
             for (File file : files) {
-                if (file == null || !file.isFile() || !file.getName().startsWith("event_") || !file.getName().endsWith(".json")) {
+                if (!isEventJsonFile(file)) {
                     continue;
                 }
                 JSONObject json = readJson(file);
@@ -144,12 +144,16 @@ public class AtlasReviewRepository {
     }
 
     public JSONObject loadEventById(String eventId) {
+        return loadEventById(null, eventId);
+    }
+
+    public JSONObject loadEventById(String sessionId, String eventId) {
         if (TextUtils.isEmpty(eventId)) {
             return null;
         }
         List<EventSummary> events = loadEventSummaries();
         for (EventSummary item : events) {
-            if (eventId.equals(item.eventId)) {
+            if (eventId.equals(item.eventId) && (TextUtils.isEmpty(sessionId) || sessionId.equals(item.sessionId))) {
                 return item.eventJson;
             }
         }
@@ -269,6 +273,57 @@ public class AtlasReviewRepository {
         } catch (JSONException ignored) {
             return false;
         }
+    }
+
+    public boolean hasUsefulDerivedContext(JSONObject event) {
+        if (event == null) {
+            return false;
+        }
+        JSONObject derived = event.optJSONObject("derived_context");
+        JSONObject gps = derived != null ? derived.optJSONObject("gps") : null;
+        JSONObject weather = derived != null ? derived.optJSONObject("weather") : null;
+        boolean hasLocation = gps != null && gps.has("lat") && gps.has("lng") && !TextUtils.isEmpty(gps.optString("address", ""));
+        boolean hasWeather = weather != null && !TextUtils.isEmpty(weather.optString("condition", ""));
+        return hasLocation && hasWeather;
+    }
+
+    public int backfillMissingContextFromNearby(JSONObject sourceEvent, long windowMs) {
+        if (!hasUsefulDerivedContext(sourceEvent)) {
+            return 0;
+        }
+        JSONObject sourceDerived = sourceEvent.optJSONObject("derived_context");
+        if (sourceDerived == null) {
+            return 0;
+        }
+        String sourceEventId = sourceEvent.optString("event_id", "");
+        JSONObject sourceMeta = sourceEvent.optJSONObject("_meta");
+        String sourceSessionId = sourceMeta != null ? sourceMeta.optString("session_id", "") : "";
+        long sourceStartMs = sourceEvent.optLong("start_time_ms", sourceEvent.optLong("device_start_ms", 0L));
+        int count = 0;
+        List<EventSummary> events = loadEventSummaries();
+        for (EventSummary item : events) {
+            if (item == null || item.eventJson == null) {
+                continue;
+            }
+            if (sourceEventId.equals(item.eventId) && sourceSessionId.equals(item.sessionId)) {
+                continue;
+            }
+            long targetStartMs = item.eventJson.optLong("start_time_ms", item.eventJson.optLong("device_start_ms", item.startTimeMs));
+            if (sourceStartMs > 0L && targetStartMs > 0L && Math.abs(sourceStartMs - targetStartMs) > windowMs) {
+                continue;
+            }
+            if (hasUsefulDerivedContext(item.eventJson)) {
+                continue;
+            }
+            try {
+                item.eventJson.put("derived_context", new JSONObject(sourceDerived.toString()));
+                if (saveEvent(item.eventJson)) {
+                    count += 1;
+                }
+            } catch (JSONException ignored) {
+            }
+        }
+        return count;
     }
 
     public String getAmapApiKey() {
@@ -604,9 +659,12 @@ public class AtlasReviewRepository {
         auto.put("audio_clips", audioClips);
         normalized.put("auto_captured", auto);
 
-        JSONObject derived = new JSONObject();
-        derived.put("gps", new JSONObject());
-        derived.put("weather", new JSONObject());
+        JSONObject derived = raw.optJSONObject("derived_context");
+        if (derived == null) {
+            derived = new JSONObject();
+        }
+        ensureObject(derived, "gps");
+        ensureObject(derived, "weather");
         normalized.put("derived_context", derived);
 
         JSONObject user = new JSONObject();
@@ -617,6 +675,14 @@ public class AtlasReviewRepository {
 
         ensureMeta(normalized, sessionDir, eventFile);
         return normalized;
+    }
+
+    private boolean isEventJsonFile(File file) {
+        if (file == null || !file.isFile()) {
+            return false;
+        }
+        String name = file.getName();
+        return name.endsWith(".json") && (name.startsWith("event_") || name.contains("_event_"));
     }
 
     private void ensureNormalizedCollections(JSONObject event) throws JSONException {

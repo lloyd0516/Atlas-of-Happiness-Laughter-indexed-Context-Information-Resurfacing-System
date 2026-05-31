@@ -36,6 +36,10 @@ public class JoyfulMomentEventStore {
         return dir;
     }
 
+    public File getRootDir() {
+        return rootDir;
+    }
+
     public synchronized void appendJsonLine(File file, JSONObject json) {
         try {
             File parent = file.getParentFile();
