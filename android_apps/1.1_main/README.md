@@ -16,24 +16,36 @@ docs/atlas_1_1_pipeline.svg
 
 ## 快速构建
 
+仓库包含 `atlas_keys.properties`，默认构建会把 Speechmatics、高德和天气 API key 注入到 APK。
+
 ```powershell
 cd android_apps/1.1_main
 $env:JAVA_HOME='C:\Program Files\Eclipse Adoptium\jdk-8.0.482.8-hotspot'
+$env:ANDROID_HOME='C:\Users\<you>\AppData\Local\Android\Sdk'
+$env:ANDROID_SDK_ROOT=$env:ANDROID_HOME
 $env:Path="$env:JAVA_HOME\bin;$env:Path"
 .\gradlew.bat :atlasapp:assembleDebug
 ```
 
-## 安全说明
+## ADB 安装
 
-仓库不提交真实 Speechmatics / 高德 API key。请在 App Settings 中填写，或通过环境变量注入：
+直接安装仓库中已构建好的 APK：
 
 ```powershell
-$env:SPEECHMATICS_API_KEY='your_key_here'
-$env:AMAP_API_KEY='your_key_here'
+adb install -r apks\atlasapp-debug.apk
 ```
 
-本地构建也可以在未提交的 `local.properties` 中配置：
+如果你本地重新构建了，也可以安装新生成的 debug APK：
+
+```powershell
+adb install -r atlasapp\build\outputs\apk\debug\atlasapp-debug.apk
+```
+
+## 覆盖 API key
+
+如果需要临时覆盖仓库里的 key，可以通过环境变量或未提交的 `local.properties` 配置：
 
 ```properties
+speechmatics.api.key=your_key_here
 amap.api.key=your_key_here
 ```

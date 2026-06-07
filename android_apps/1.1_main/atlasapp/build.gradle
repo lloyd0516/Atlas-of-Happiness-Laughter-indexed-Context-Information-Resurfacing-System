@@ -8,8 +8,23 @@ if (localPropertiesFile.exists()) {
     }
 }
 
+def checkedInKeys = new Properties()
+def checkedInKeysFile = rootProject.file('atlas_keys.properties')
+if (checkedInKeysFile.exists()) {
+    checkedInKeysFile.withInputStream { stream ->
+        checkedInKeys.load(stream)
+    }
+}
+
 def configString = { value ->
     "\"${(value ?: '').replace('\\', '\\\\').replace('"', '\\"')}\""
+}
+
+def configValue = { envName, propertyName, fallback ->
+    System.getenv(envName)
+            ?: localProperties.getProperty(propertyName)
+            ?: checkedInKeys.getProperty(propertyName)
+            ?: fallback
 }
 
 android {
@@ -22,19 +37,11 @@ android {
         versionName "1.1-main"
         vectorDrawables.useSupportLibrary = true
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
-        def speechmaticsApiKey = System.getenv("SPEECHMATICS_API_KEY") 
-                ?: localProperties.getProperty("speechmatics.api.key")
-                ?: ""
-        def speechmaticsRtUrl = System.getenv("SPEECHMATICS_RT_URL") 
-                ?: localProperties.getProperty("speechmatics.api.url")
-                ?: "wss://eu2.rt.speechmatics.com/v2"
-        def googleMapsApiKey = System.getenv("GOOGLE_MAPS_API_KEY") 
-                ?: localProperties.getProperty("google.maps.api.key")
-                ?: ""
-        def amapApiKey = System.getenv("AMAP_API_KEY") 
-                ?: localProperties.getProperty("amap.api.key")
-                ?: ""
-        def openWeatherApiKey = System.getenv("OPENWEATHER_API_KEY") 
+        def speechmaticsApiKey = configValue("SPEECHMATICS_API_KEY", "speechmatics.api.key", "")
+        def speechmaticsRtUrl = configValue("SPEECHMATICS_RT_URL", "speechmatics.api.url", "wss://eu2.rt.speechmatics.com/v2")
+        def googleMapsApiKey = configValue("GOOGLE_MAPS_API_KEY", "google.maps.api.key", "")
+        def amapApiKey = configValue("AMAP_API_KEY", "amap.api.key", "")
+        def openWeatherApiKey = System.getenv("OPENWEATHER_API_KEY")
                 ?: System.getenv("GOOGLE_WEATHER_API_KEY")
                 ?: localProperties.getProperty("openweather.api.key")
                 ?: ""
