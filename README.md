@@ -1,0 +1,1 @@
+- 2.0 为最新版 用于user-study-prototype的 app
