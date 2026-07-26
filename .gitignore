@@ -1,0 +1,19 @@
+# Android standard
+*.iml
+.gradle/
+/local.properties
+/.idea/
+.DS_Store
+/build/
+*/build/
+/captures
+
+# Keystore files
+*.jks
+*.keystore
+
+# Gradle
+/gradle/wrapper/gradle-wrapper.jar
+
+# Your local keys
+atlas_keys.properties

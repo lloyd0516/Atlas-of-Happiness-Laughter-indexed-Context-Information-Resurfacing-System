@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Requirement 2.II: bigger cell with a "N次" caption under the day number, per 日历组织视图.jpg. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="0dp"
+    android:layout_height="56dp"
+    android:layout_weight="1"
+    android:layout_margin="1dp"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:background="@drawable/atlas_calendar_day_bg"
+    android:clickable="true"
+    android:focusable="true">
+
+    <TextView
+        android:id="@+id/txtDayNumber"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/mock_text_primary"
+        android:textSize="15sp" />
+
+    <TextView
+        android:id="@+id/txtDayEventCount"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="1dp"
+        android:textColor="@color/mock_orange_dark"
+        android:textSize="10sp"
+        android:visibility="gone" />
+
+    <View
+        android:id="@+id/dotEventMarker"
+        android:layout_width="5dp"
+        android:layout_height="5dp"
+        android:layout_marginTop="2dp"
+        android:background="@drawable/atlas_calendar_event_dot"
+        android:visibility="gone" />
+</LinearLayout>

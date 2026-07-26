@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Shared bottom navigation bar (requirement 6). Included at the bottom of each of the three
+    top-level screens (Record / Review / Me). Each host activity wires item-selection via
+    AtlasBottomNav.wire(...) so the visual bar and its behavior stay identical everywhere.
+-->
+<android.support.design.widget.BottomNavigationView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/bottomNav"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/atlas_surface"
+    app:itemIconTint="@color/atlas_text_primary"
+    app:itemTextColor="@color/atlas_text_primary"
+    app:menu="@menu/bottom_nav_menu" />

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Requirement 6: only Record / Review / Me remain (Stats tab removed). -->
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_record"
+        android:icon="@drawable/ic_atlas_laughter"
+        android:title="@string/bottom_nav_record" />
+    <item
+        android:id="@+id/nav_review"
+        android:icon="@drawable/ic_atlas_event"
+        android:title="@string/bottom_nav_review" />
+    <item
+        android:id="@+id/nav_me"
+        android:icon="@drawable/ic_atlas_settings"
+        android:title="@string/bottom_nav_me" />
+</menu>

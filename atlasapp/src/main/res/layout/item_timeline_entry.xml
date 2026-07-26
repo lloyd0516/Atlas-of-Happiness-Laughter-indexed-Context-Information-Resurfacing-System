@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Requirement 2.III: timeline entry with a cover pic (tap to change), restyled to match the
+     mockup palette used by the map/calendar cards (materials/时间线组织视图.jpg). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:paddingBottom="18dp">
+
+    <LinearLayout
+        android:layout_width="32dp"
+        android:layout_height="match_parent"
+        android:gravity="center_horizontal"
+        android:orientation="vertical">
+
+        <View
+            android:id="@+id/timelineDot"
+            android:layout_width="12dp"
+            android:layout_height="12dp"
+            android:layout_marginTop="6dp"
+            android:background="@drawable/atlas_calendar_event_dot" />
+
+        <View
+            android:id="@+id/timelineRail"
+            android:layout_width="2dp"
+            android:layout_height="0dp"
+            android:layout_marginTop="4dp"
+            android:layout_weight="1"
+            android:background="@color/mock_border" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_weight="1"
+        android:background="@drawable/atlas_floating_card_bg"
+        android:orientation="vertical"
+        android:padding="0dp">
+
+        <FrameLayout
+            android:id="@+id/timelineCoverFrame"
+            android:layout_width="match_parent"
+            android:layout_height="120dp">
+
+            <ImageView
+                android:id="@+id/imgTimelineCover"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@color/mock_photo_placeholder_a"
+                android:scaleType="centerCrop" />
+
+            <ImageView
+                android:id="@+id/imgTimelineCoverPlaceholder"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_gravity="center"
+                android:alpha="0.6"
+                android:src="@drawable/ic_atlas_photo" />
+
+            <TextView
+                android:id="@+id/txtTimelineCoverEdit"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom|end"
+                android:layout_margin="8dp"
+                android:background="@drawable/atlas_map_stat_pill"
+                android:paddingStart="8dp"
+                android:paddingTop="3dp"
+                android:paddingEnd="8dp"
+                android:paddingBottom="3dp"
+                android:text="@string/timeline_change_cover"
+                android:textColor="@color/mock_text_primary"
+                android:textSize="10sp" />
+        </FrameLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="14dp">
+
+            <TextView
+                android:id="@+id/txtTimelineTime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/mock_text_muted"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/txtTimelineTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="@color/mock_text_primary"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/txtTimelineMeta"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:textColor="@color/mock_text_muted"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/btnTimelineDetails"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/atlas_chip"
+                android:minHeight="0dp"
+                android:paddingStart="12dp"
+                android:paddingTop="6dp"
+                android:paddingEnd="12dp"
+                android:paddingBottom="6dp"
+                android:text="@string/review_view_details"
+                android:textAllCaps="false"
+                android:textColor="@color/mock_text_primary"
+                android:textSize="12sp" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

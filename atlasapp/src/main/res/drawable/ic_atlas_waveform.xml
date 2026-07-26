@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Requirement 3: audio-row waveform bars per materials/*.jpg (a row of short vertical bars of varying height, orange). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="24dp"
+    android:viewportWidth="120"
+    android:viewportHeight="24">
+    <path android:fillColor="#F08A3C" android:pathData="M0,8h3v8h-3z" />
+    <path android:fillColor="#F08A3C" android:pathData="M6,4h3v16h-3z" />
+    <path android:fillColor="#F08A3C" android:pathData="M12,10h3v4h-3z" />
+    <path android:fillColor="#F08A3C" android:pathData="M18,2h3v20h-3z" />
+    <path android:fillColor="#F08A3C" android:pathData="M24,7h3v10h-3z" />
+    <path android:fillColor="#F08A3C" android:pathData="M30,9h3v6h-3z" />
+    <path android:fillColor="#F08A3C" android:pathData="M36,3h3v18h-3z" />
+    <path android:fillColor="#F08A3C" android:pathData="M42,6h3v12h-3z" />
+    <path android:fillColor="#F08A3C" android:pathData="M48,10h3v4h-3z" />
+    <path android:fillColor="#F08A3C" android:pathData="M54,1h3v22h-3z" />
+    <path android:fillColor="#F08A3C" android:pathData="M60,8h3v8h-3z" />
+    <path android:fillColor="#F08A3C" android:pathData="M66,5h3v14h-3z" />
+    <path android:fillColor="#F08A3C" android:pathData="M72,9h3v6h-3z" />
+    <path android:fillColor="#F08A3C" android:pathData="M78,3h3v18h-3z" />
+    <path android:fillColor="#F08A3C" android:pathData="M84,7h3v10h-3z" />
+    <path android:fillColor="#F08A3C" android:pathData="M90,10h3v4h-3z" />
+    <path android:fillColor="#F08A3C" android:pathData="M96,2h3v20h-3z" />
+    <path android:fillColor="#F08A3C" android:pathData="M102,8h3v8h-3z" />
+    <path android:fillColor="#F08A3C" android:pathData="M108,5h3v14h-3z" />
+    <path android:fillColor="#F08A3C" android:pathData="M114,9h3v6h-3z" />
+</vector>

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Requirement 3 (redesign pass): legacy 1.1_main sections removed per explicit user request —
+    Timeline Strip / Auto Capture (superseded by the per-clip cards below) and the standalone
+    User Reflection block (superseded by each clip's timestamped notes log). Location & weather
+    context (with its refresh action) is kept since the user asked for it explicitly.
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/mock_page_bg">
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="20dp">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
+            <Button android:id="@+id/btnBack" android:layout_width="wrap_content" android:layout_height="wrap_content" android:background="@drawable/atlas_chip" android:text="@string/btn_back" android:textAllCaps="false" android:textColor="@color/mock_text_primary" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="12dp" android:text="@string/event_detail_title" android:textColor="@color/mock_text_primary" android:textSize="22sp" android:textStyle="bold" />
+        </LinearLayout>
+        <TextView android:id="@+id/txtHeaderTime" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:textColor="@color/mock_text_muted" />
+        <TextView android:id="@+id/txtHeaderRecency" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textColor="@color/mock_text_muted" android:textSize="12sp" />
+
+        <!-- Requirement 4: one card per laughter clip, long-term (compact) vs short-term (richer) rendering. -->
+        <LinearLayout android:id="@+id/clipCardsContainer" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:orientation="vertical" />
+        <TextView android:id="@+id/emptyClipsView" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:background="@drawable/atlas_floating_card_bg" android:padding="16dp" android:text="@string/event_detail_media_empty" android:textColor="@color/mock_text_muted" android:visibility="gone" />
+
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:text="@string/event_detail_context" android:textColor="@color/mock_text_primary" android:textStyle="bold" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="@string/label_location" android:textColor="@color/mock_text_muted" />
+        <TextView android:id="@+id/txtGps" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:background="@drawable/atlas_floating_card_bg" android:padding="12dp" android:textColor="@color/mock_text_primary" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="@string/label_weather" android:textColor="@color/mock_text_muted" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:background="@drawable/atlas_floating_card_bg" android:gravity="center_vertical" android:orientation="horizontal" android:padding="12dp">
+            <ImageView android:id="@+id/imgWeatherIcon" android:layout_width="32dp" android:layout_height="32dp" android:src="@drawable/ic_atlas_weather" />
+            <TextView android:id="@+id/txtWeather" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginLeft="10dp" android:layout_weight="1" android:textColor="@color/mock_text_primary" />
+        </LinearLayout>
+        <Button android:id="@+id/btnRefreshContext" android:layout_width="match_parent" android:layout_height="48dp" android:layout_marginTop="10dp" android:background="@drawable/atlas_chip" android:text="@string/btn_refresh" android:textAllCaps="false" android:textColor="@color/mock_text_primary" />
+
+        <!-- Hidden legacy views: kept only so pre-existing Java field wiring (media preview /
+             playback machinery reused by the clip cards) still compiles without a rewrite. -->
+        <LinearLayout android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone">
+            <ImageView android:id="@+id/imagePreview" android:layout_width="1dp" android:layout_height="1dp" />
+            <VideoView android:id="@+id/videoPreview" android:layout_width="1dp" android:layout_height="1dp" />
+            <TextView android:id="@+id/txtAudioStatus" android:layout_width="1dp" android:layout_height="1dp" />
+            <LinearLayout android:id="@+id/autoMediaContainer" android:layout_width="1dp" android:layout_height="1dp" />
+            <LinearLayout android:id="@+id/timelineContainer" android:layout_width="1dp" android:layout_height="1dp" />
+            <EditText android:id="@+id/inputNote" android:layout_width="1dp" android:layout_height="1dp" />
+            <LinearLayout android:id="@+id/notesContainer" android:layout_width="1dp" android:layout_height="1dp" />
+            <LinearLayout android:id="@+id/userMediaContainer" android:layout_width="1dp" android:layout_height="1dp" />
+            <Button android:id="@+id/btnAddText" android:layout_width="1dp" android:layout_height="1dp" />
+            <Button android:id="@+id/btnAddAudio" android:layout_width="1dp" android:layout_height="1dp" />
+            <Button android:id="@+id/btnAddPhoto" android:layout_width="1dp" android:layout_height="1dp" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

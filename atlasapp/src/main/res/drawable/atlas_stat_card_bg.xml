@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Requirement 1: "今日数据" card background, warm cream matching materials/recording页面.jpg. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/mock_orange_bg" />
+    <corners android:radius="14dp" />
+</shape>

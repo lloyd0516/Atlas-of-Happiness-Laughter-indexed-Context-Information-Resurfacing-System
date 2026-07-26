@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/atlas_section_bg"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="@string/recording_preview_dialog_title"
+        android:textColor="@color/atlas_text_primary"
+        android:textSize="16sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:gravity="center"
+        android:text="@string/recording_preview_dialog_hint"
+        android:textColor="@color/atlas_text_secondary"
+        android:textSize="13sp" />
+
+    <!--
+        Requirement 1: popup preview must keep the same aspect ratio as the real USB camera
+        (VIDEO_W:VIDEO_H = 640:480 = 4:3, see MainActivity), but stay small — not full screen.
+        layout_constraintDimensionRatio below enforces 4:3 regardless of device width.
+    -->
+    <android.support.constraint.ConstraintLayout
+        android:layout_width="260dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:layout_gravity="center_horizontal">
+
+        <FrameLayout
+            android:id="@+id/dialogPreviewFrame"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:background="@color/atlas_warm_gray"
+            app:layout_constraintDimensionRatio="H,4:3"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <SurfaceView
+                android:id="@+id/surfaceView"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_gravity="center" />
+
+            <TextView
+                android:id="@+id/previewTip"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:padding="12dp"
+                android:text="@string/preview_tip"
+                android:textColor="@color/atlas_text_secondary"
+                android:textSize="13sp" />
+        </FrameLayout>
+    </android.support.constraint.ConstraintLayout>
+
+    <Button
+        android:id="@+id/btnPreviewConfirmStart"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/atlas_button_soft"
+        android:text="@string/recording_preview_confirm"
+        android:textAllCaps="false"
+        android:textColor="@color/atlas_text_primary" />
+
+    <Button
+        android:id="@+id/btnPreviewCancel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:background="@android:color/transparent"
+        android:text="@string/recording_preview_cancel"
+        android:textAllCaps="false"
+        android:textColor="@color/atlas_text_secondary" />
+
+</LinearLayout>

@@ -1,0 +1,353 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Requirement 4: one card per laughter clip inside an event, matching
+    materials/long_short_resurfacing_prototype.html. The same card layout serves both the
+    long-term (compact) and short-term (richer default) rendering; EventDetailActivity decides
+    which optional rows to show/hide based on which mode is active.
+    Redesign pass: mock_* palette, waveform icons on every audio row, and the "用户摘要" field
+    replaced by a timestamped notes log (each supplement is its own dated entry, chat-style).
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:paddingBottom="18dp">
+
+    <LinearLayout
+        android:layout_width="44dp"
+        android:layout_height="match_parent"
+        android:gravity="center_horizontal"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/txtClipDurationBadge"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/atlas_record_button_idle"
+            android:gravity="center"
+            android:textColor="@color/atlas_white"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+
+        <View
+            android:id="@+id/clipRail"
+            android:layout_width="2dp"
+            android:layout_height="0dp"
+            android:layout_marginTop="4dp"
+            android:layout_weight="1"
+            android:background="@color/mock_orange_bg" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_weight="1"
+        android:background="@drawable/atlas_floating_card_bg"
+        android:orientation="vertical"
+        android:padding="14dp">
+
+        <!-- Short-term header row: title + exact HH:mm:ss timestamp range on the right. -->
+        <LinearLayout
+            android:id="@+id/clipHeaderRow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="top">
+
+            <TextView
+                android:id="@+id/txtClipTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/clip_label_prefix"
+                android:textColor="@color/mock_text_primary"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/txtClipTimeRange"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/mock_text_muted"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <!-- Short-term only: photo/video strip appears above the audio rows. -->
+        <HorizontalScrollView
+            android:id="@+id/clipPhotoStripShort"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:scrollbars="none"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:id="@+id/clipPhotoStripShortContainer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal" />
+        </HorizontalScrollView>
+
+        <!-- Laughter audio row (always shown by default in both modes). -->
+        <LinearLayout
+            android:id="@+id/clipLaughterAudioRow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:id="@+id/imgClipLaughterPlay"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:src="@drawable/ic_atlas_play_circle" />
+
+            <ImageView
+                android:layout_width="0dp"
+                android:layout_height="24dp"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:scaleType="fitXY"
+                android:src="@drawable/ic_atlas_waveform" />
+
+            <TextView
+                android:id="@+id/txtClipLaughterDuration"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:textColor="@color/mock_text_muted"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- Short-term only: related-context audio row also shown by default. -->
+        <LinearLayout
+            android:id="@+id/clipContextAudioRowShort"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/imgClipContextPlayShort"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:src="@drawable/ic_atlas_play_circle" />
+
+            <ImageView
+                android:layout_width="0dp"
+                android:layout_height="24dp"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:scaleType="fitXY"
+                android:src="@drawable/ic_atlas_waveform" />
+
+            <TextView
+                android:id="@+id/txtClipContextAudioDurationShort"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:textColor="@color/mock_text_muted"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- Location + date row (always shown by default in both modes). -->
+        <TextView
+            android:id="@+id/txtClipLocationDate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:drawablePadding="4dp"
+            android:textColor="@color/mock_text_muted"
+            android:textSize="12sp" />
+
+        <!-- Long-term only: social tag pill shown inline (never in the default short view). -->
+        <TextView
+            android:id="@+id/txtClipSocialTagPill"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:background="@drawable/atlas_map_stat_pill"
+            android:paddingStart="10dp"
+            android:paddingTop="3dp"
+            android:paddingEnd="10dp"
+            android:paddingBottom="3dp"
+            android:textColor="@color/mock_orange_dark"
+            android:textSize="11sp"
+            android:visibility="gone" />
+
+        <!-- Expanded details, identical content for both modes; only the toggle label differs. -->
+        <LinearLayout
+            android:id="@+id/clipExpandedDetails"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="vertical"
+            android:paddingTop="10dp"
+            android:visibility="gone">
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginBottom="10dp"
+                android:background="@color/mock_border" />
+
+            <!-- Long-term only: photo/video strip lives inside the expanded section. -->
+            <TextView
+                android:id="@+id/labelClipPhotoVideoLong"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/clip_photos_videos"
+                android:textColor="@color/mock_text_muted"
+                android:textSize="11sp"
+                android:visibility="gone" />
+
+            <HorizontalScrollView
+                android:id="@+id/clipPhotoStripLong"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:scrollbars="none"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:id="@+id/clipPhotoStripLongContainer"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal" />
+            </HorizontalScrollView>
+
+            <!-- Long-term only: related-context audio also lives inside the expanded section. -->
+            <TextView
+                android:id="@+id/labelClipContextAudioLong"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/clip_related_context_audio"
+                android:textColor="@color/mock_text_muted"
+                android:textSize="11sp"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/clipContextAudioRowLong"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+                <ImageView
+                    android:id="@+id/imgClipContextPlayLong"
+                    android:layout_width="34dp"
+                    android:layout_height="34dp"
+                    android:src="@drawable/ic_atlas_play_circle" />
+
+                <ImageView
+                    android:layout_width="0dp"
+                    android:layout_height="24dp"
+                    android:layout_marginStart="10dp"
+                    android:layout_weight="1"
+                    android:scaleType="fitXY"
+                    android:src="@drawable/ic_atlas_waveform" />
+
+                <TextView
+                    android:id="@+id/txtClipContextAudioDurationLong"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:textColor="@color/mock_text_muted"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- Social context: same event-level value shown in every clip's expanded section. -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/social_context_title"
+                android:textColor="@color/mock_text_muted"
+                android:textSize="11sp" />
+
+            <TextView
+                android:id="@+id/txtClipSocialContext"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="@color/mock_text_primary"
+                android:textSize="12sp" />
+
+            <!--
+                User notes: a timestamped log, chat-message style — each supplement is its own
+                dated entry rather than one overwritable summary. New entries append via
+                inputClipUserSummary + btnClipAddNote below the list.
+            -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/user_summary_title"
+                android:textColor="@color/mock_text_muted"
+                android:textSize="11sp" />
+
+            <LinearLayout
+                android:id="@+id/clipNotesLogContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:orientation="vertical" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <EditText
+                    android:id="@+id/inputClipUserSummary"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="@drawable/atlas_chip"
+                    android:hint="@string/user_summary_hint"
+                    android:padding="10dp"
+                    android:textColor="@color/mock_text_primary"
+                    android:textSize="12sp" />
+
+                <Button
+                    android:id="@+id/btnClipAddNote"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:background="@drawable/atlas_record_button_idle"
+                    android:minHeight="0dp"
+                    android:minWidth="0dp"
+                    android:paddingStart="16dp"
+                    android:paddingTop="10dp"
+                    android:paddingEnd="16dp"
+                    android:paddingBottom="10dp"
+                    android:text="@string/btn_add_note"
+                    android:textAllCaps="false"
+                    android:textColor="@color/atlas_white"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/btnClipToggleDetails"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/atlas_chip"
+            android:minHeight="0dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:text="@string/btn_view_more_details"
+            android:textAllCaps="false"
+            android:textColor="@color/mock_text_muted"
+            android:textSize="12sp" />
+    </LinearLayout>
+</LinearLayout>

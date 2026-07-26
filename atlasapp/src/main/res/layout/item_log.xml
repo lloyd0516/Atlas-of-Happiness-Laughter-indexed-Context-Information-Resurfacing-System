@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="10dp"
+    android:background="@drawable/atlas_section_bg"
+    android:orientation="vertical"
+    android:padding="14dp">
+    <TextView android:id="@+id/txtLogTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/atlas_text_primary" android:textStyle="bold" />
+    <TextView android:id="@+id/txtLogBody" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:fontFamily="monospace" android:textColor="@color/atlas_text_secondary" android:textSize="12sp" />
+</LinearLayout>

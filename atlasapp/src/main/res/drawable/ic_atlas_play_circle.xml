@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Requirement 3: orange circular play button used at the start of every audio row (laughter / context). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="34dp"
+    android:height="34dp"
+    android:viewportWidth="34"
+    android:viewportHeight="34">
+    <path
+        android:fillColor="#F08A3C"
+        android:pathData="M17,0C7.6,0 0,7.6 0,17s7.6,17 17,17 17,-7.6 17,-17S26.4,0 17,0z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M13,10.5l11,6.5 -11,6.5z" />
+</vector>
