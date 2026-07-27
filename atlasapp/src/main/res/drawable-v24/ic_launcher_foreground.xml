@@ -4,21 +4,26 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- A warm map pin: place-based memory with a laughing face at its center. -->
+    <!-- A positive-memory light resurfacing through two layers of time. -->
     <path
-        android:fillColor="#FF982F"
-        android:pathData="M54,16C35.2,16 23,29.3 23,46.5C23,66.7 46.2,88.2 54,95C61.8,88.2 85,66.7 85,46.5C85,29.3 72.8,16 54,16Z" />
+        android:fillColor="#FFFF982F"
+        android:pathData="M54,22A13,13 0,1 0,54 48A13,13 0,0 0,54 22" />
     <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M41,38A3.2,3.2 0,1 0,41 44.4A3.2,3.2 0,0 0,41 38M67,38A3.2,3.2 0,1 0,67 44.4A3.2,3.2 0,0 0,67 38" />
+        android:fillColor="#FFFFF8F1"
+        android:pathData="M54,27.5L56,33L61.5,35L56,37L54,42.5L52,37L46.5,35L52,33Z" />
     <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M38,51C39.8,62 46,68 54,68C62,68 68.2,62 70,51C63.7,54 44.3,54 38,51Z" />
+        android:fillColor="#FFFF982F"
+        android:pathData="M54,49A3,3 0,1 0,54 55A3,3 0,0 0,54 49" />
     <path
-        android:fillColor="#FFE07E1A"
-        android:pathData="M48,63C51.7,65.3 56.3,65.3 60,63C57.8,60.7 50.2,60.7 48,63Z" />
-    <!-- Two small trail points make the pin read as part of an atlas, not a generic marker. -->
+        android:fillColor="#00000000"
+        android:pathData="M36,57Q54,70 72,57"
+        android:strokeColor="#FFFF982F"
+        android:strokeLineCap="round"
+        android:strokeWidth="6" />
     <path
-        android:fillColor="#FFFFC88F"
-        android:pathData="M25,73A4,4 0,1 0,25 81A4,4 0,0 0,25 73M14,84A2.8,2.8 0,1 0,14 89.6A2.8,2.8 0,0 0,14 84" />
+        android:fillColor="#00000000"
+        android:pathData="M24,69Q54,89 84,69"
+        android:strokeColor="#FFE07E1A"
+        android:strokeLineCap="round"
+        android:strokeWidth="6.5" />
 </vector>
