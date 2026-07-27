@@ -57,6 +57,28 @@ public final class AppConfig {
     public static final long RECENCY_JUST_NOW_MS = 60 * 1000L;
     public static final long RECENCY_MINUTES_MS = 60 * 60 * 1000L;
 
+    // ---- Resurfacing notifications ----
+    /** Local wall-clock time used by the daily reminder alarm. */
+    public static final int DAILY_REVIEW_HOUR = 19;
+    public static final int DAILY_REVIEW_MINUTE = 30;
+    /** Calendar-day offsets used for the two independent daily notification categories. */
+    public static final int SHORT_TERM_DAY_OFFSET = 1;
+    public static final int LONG_TERM_DAY_OFFSET = 7;
+    /** Retry a missed daily category after this delay, up to the configured attempt count. */
+    public static final long DAILY_REVIEW_RETRY_DELAY_MS = 15L * 60L * 1000L;
+    public static final int DAILY_REVIEW_MAX_RETRIES = 2;
+    /** Small delay used to coalesce recovery after boot/app start when today's alarm was missed. */
+    public static final long DAILY_REVIEW_CATCH_UP_DELAY_MS = 5L * 1000L;
+
+    /** A historical place matches when the current fix is within this radius. */
+    public static final float SPECIAL_LOCATION_RADIUS_METERS = 50f;
+    /** Never resurface a place backed only by moments newer than this. */
+    public static final long SPECIAL_MIN_EVENT_AGE_MS = 6L * 60L * 60L * 1000L;
+    /** Global quiet period between any two location-triggered notifications. */
+    public static final long SPECIAL_NOTIFICATION_COOLDOWN_MS = 2L * 60L * 60L * 1000L;
+    /** Only a recent, accurate last-known fix may veto a native proximity-enter event. */
+    public static final long SPECIAL_CURRENT_FIX_MAX_AGE_MS = 2L * 60L * 1000L;
+
     // ---- GPS / AMap request budget (free tier - must stay low-frequency) ----
     /** Timeout waiting for a single fresh GPS fix before falling back to last-known location. */
     public static final long GPS_FRESH_FIX_TIMEOUT_MS = 12000L;

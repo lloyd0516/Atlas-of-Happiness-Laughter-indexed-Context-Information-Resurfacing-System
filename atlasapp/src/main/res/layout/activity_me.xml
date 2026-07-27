@@ -75,6 +75,55 @@
                 </RadioGroup>
             </LinearLayout>
 
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/atlas_section_bg"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/me_reminders_title"
+                    android:textColor="@color/atlas_text_primary"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <android.support.v7.widget.SwitchCompat
+                    android:id="@+id/switchDailyReminder"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/me_daily_reminder"
+                    android:textColor="@color/atlas_text_primary" />
+
+                <TextView
+                    android:id="@+id/txtDailyReminderStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:textColor="@color/atlas_text_secondary"
+                    android:textSize="12sp" />
+
+                <android.support.v7.widget.SwitchCompat
+                    android:id="@+id/switchLocationReminder"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="@string/me_location_reminder"
+                    android:textColor="@color/atlas_text_primary" />
+
+                <TextView
+                    android:id="@+id/txtLocationReminderStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:textColor="@color/atlas_text_secondary"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
             <!-- Requirement 6: Log placeholder — not designed yet. -->
             <LinearLayout
                 android:layout_width="match_parent"

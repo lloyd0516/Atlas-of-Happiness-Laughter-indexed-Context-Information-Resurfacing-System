@@ -35,6 +35,9 @@ import java.util.Map;
 public class ReviewShellActivity extends AppCompatActivity {
     private AtlasReviewRepository repository;
     private List<AtlasReviewRepository.EventSummary> allEvents = new ArrayList<>();
+    private TabLayout reviewTabLayout;
+    private Double focusedMapLat;
+    private Double focusedMapLng;
 
     private View tabMapContent;
     private View tabCalendarContent;
@@ -110,8 +113,8 @@ public class ReviewShellActivity extends AppCompatActivity {
         timelineContainer = findViewById(R.id.timelineContainer);
         timelineEmptyView = findViewById(R.id.emptyTimelineView);
 
-        TabLayout tabLayout = findViewById(R.id.reviewTabLayout);
-        tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+        reviewTabLayout = findViewById(R.id.reviewTabLayout);
+        reviewTabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
             public void onTabSelected(TabLayout.Tab tab) {
                 showTab(tab.getPosition());
@@ -127,7 +130,7 @@ public class ReviewShellActivity extends AppCompatActivity {
         });
 
         AtlasBottomNav.setup(this, AtlasBottomNav.TAB_REVIEW);
-        showTab(0);
+        applyNavigationIntent(getIntent());
     }
 
     @Override
@@ -143,6 +146,31 @@ public class ReviewShellActivity extends AppCompatActivity {
         renderMap();
         renderCalendar();
         renderTimeline();
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        applyNavigationIntent(intent);
+        if (repository != null) {
+            renderMap();
+        }
+    }
+
+    private void applyNavigationIntent(Intent intent) {
+        if (intent != null && "map".equals(
+                intent.getStringExtra("initial_review_tab"))) {
+            double lat = intent.getDoubleExtra("focus_lat", Double.NaN);
+            double lng = intent.getDoubleExtra("focus_lng", Double.NaN);
+            focusedMapLat = Double.isNaN(lat) ? null : lat;
+            focusedMapLng = Double.isNaN(lng) ? null : lng;
+        }
+        TabLayout.Tab mapTab = reviewTabLayout.getTabAt(0);
+        if (mapTab != null) {
+            mapTab.select();
+        }
+        showTab(0);
     }
 
     private void showTab(int position) {
@@ -195,7 +223,12 @@ public class ReviewShellActivity extends AppCompatActivity {
         mapStatsPill.setVisibility(View.VISIBLE);
         mapTrailSummary.setVisibility(View.VISIBLE);
         mapEventStack.setVisibility(View.VISIBLE);
-        mapWebView.loadDataWithBaseURL("https://webapi.amap.com/", AtlasMapHtmlBuilder.build(located), "text/html", "UTF-8", null);
+        mapWebView.loadDataWithBaseURL(
+                "https://webapi.amap.com/",
+                AtlasMapHtmlBuilder.build(located, focusedMapLat, focusedMapLng),
+                "text/html",
+                "UTF-8",
+                null);
 
         java.util.Set<String> distinctLocations = new java.util.HashSet<>();
         for (AtlasReviewRepository.EventSummary item : located) {

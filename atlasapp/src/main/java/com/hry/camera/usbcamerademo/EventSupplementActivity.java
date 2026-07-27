@@ -157,6 +157,8 @@ public class EventSupplementActivity extends AppCompatActivity {
                         AtlasReviewRepository.EventSummary summary = findSummary();
                         if (summary != null) {
                             repository.deleteEventPermanently(summary);
+                            AtlasResurfacingManager.refreshLocationsAsync(
+                                    EventSupplementActivity.this);
                         }
                         finish();
                     }
@@ -172,6 +174,7 @@ public class EventSupplementActivity extends AppCompatActivity {
 
     private void applyDecisionAndOfferEdit(String action) {
         repository.saveDecision(eventJson, action);
+        AtlasResurfacingManager.refreshLocationsAsync(this);
         new AlertDialog.Builder(this)
                 .setMessage(R.string.event_detail_notes_hint)
                 .setPositiveButton(R.string.save_decision_edit_now, new DialogInterface.OnClickListener() {

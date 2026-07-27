@@ -44,6 +44,7 @@ import java.util.List;
 import java.util.Locale;
 
 public class EventDetailActivity extends AppCompatActivity {
+    static final String EXTRA_RESURFACING_MODE = "resurfacing_mode";
     private static final String TAG = "Atlas.EventDetail";
     private static final int REQ_LOCATION = 201;
     private static final int REQ_AUDIO = 202;
@@ -121,6 +122,12 @@ public class EventDetailActivity extends AppCompatActivity {
                 refreshContext();
             }
         });
+        findViewById(R.id.btnDeleteEvent).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                confirmDeleteEvent();
+            }
+        });
         findViewById(R.id.btnAddText).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -170,10 +177,57 @@ public class EventDetailActivity extends AppCompatActivity {
         AtlasDevLogger.e(this, TAG, message, throwable);
     }
 
+    private void confirmDeleteEvent() {
+        new android.support.v7.app.AlertDialog.Builder(this)
+                .setMessage(R.string.event_delete_confirm)
+                .setPositiveButton(
+                        R.string.event_delete_button,
+                        new android.content.DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(
+                                    android.content.DialogInterface dialog, int which) {
+                                AtlasReviewRepository.EventSummary summary =
+                                        findCurrentSummary();
+                                boolean deleted = summary != null
+                                        && repository.deleteEventPermanently(summary);
+                                Toast.makeText(
+                                        EventDetailActivity.this,
+                                        deleted
+                                                ? R.string.event_delete_success
+                                                : R.string.event_delete_failed,
+                                        Toast.LENGTH_SHORT).show();
+                                if (deleted) {
+                                    AtlasResurfacingManager.refreshLocationsAsync(
+                                            EventDetailActivity.this);
+                                    finish();
+                                }
+                            }
+                        })
+                .setNegativeButton(R.string.btn_cancel, null)
+                .show();
+    }
+
+    private AtlasReviewRepository.EventSummary findCurrentSummary() {
+        for (AtlasReviewRepository.EventSummary summary
+                : repository.loadEventSummariesForSession(sessionId)) {
+            if (eventId.equals(summary.eventId)) {
+                return summary;
+            }
+        }
+        return null;
+    }
+
     private void renderEvent() {
         long startMs = eventJson.optLong("start_time_ms");
         long nowMs = System.currentTimeMillis();
-        longTermMode = AtlasRelativeTimeFormatter.isLongTerm(startMs, nowMs);
+        String forcedMode = getIntent().getStringExtra(EXTRA_RESURFACING_MODE);
+        if ("long".equals(forcedMode)) {
+            longTermMode = true;
+        } else if ("short".equals(forcedMode)) {
+            longTermMode = false;
+        } else {
+            longTermMode = AtlasRelativeTimeFormatter.isLongTerm(startMs, nowMs);
+        }
         headerTime.setText(repository.formatTimeRange(startMs, eventJson.optLong("end_time_ms")));
         headerRecency.setText(longTermMode
                 ? AtlasRelativeTimeFormatter.formatLongTermHeader(this, startMs, nowMs)
@@ -1116,6 +1170,8 @@ public class EventDetailActivity extends AppCompatActivity {
                         reloadEvent();
                         repository.backfillMissingContextFromNearby(eventJson, 6L * 60L * 60L * 1000L);
                         renderContext();
+                        AtlasResurfacingManager.refreshLocationsAsync(
+                                EventDetailActivity.this);
                     }
                 });
             }

@@ -22,6 +22,7 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 
@@ -445,49 +446,138 @@ public class AtlasReviewRepository {
 
     /** 物理删除事件及其关联媒体文件，用于 save_decision = delete。破坏性操作，调用方需先做二次确认。 */
     public boolean deleteEventPermanently(EventSummary summary) {
-        if (summary == null || summary.eventJson == null) {
+        if (summary == null || summary.eventJson == null || summary.eventFile == null) {
             return false;
         }
-        deleteReferencedMediaFiles(summary.eventJson);
-        return summary.eventFile != null && summary.eventFile.exists() && summary.eventFile.delete();
-    }
-
-    private void deleteReferencedMediaFiles(JSONObject event) {
-        List<String> paths = new ArrayList<>();
-        collectMediaPaths(event.optJSONObject("auto_captured"), paths);
-        collectMediaPaths(event.optJSONObject("user_generated"), paths);
-        for (String path : paths) {
-            if (TextUtils.isEmpty(path)) {
+        List<File> targets = collectOwnedDeletionTargets(
+                summary.eventJson, rootDir, summary.eventFile);
+        for (File target : targets) {
+            if (sameCanonicalFile(target, summary.eventFile)) {
                 continue;
             }
-            try {
-                File file = new File(path);
-                if (file.exists()) {
-                    file.delete();
+            deleteRecursively(target);
+        }
+        return summary.eventFile.exists() && summary.eventFile.delete();
+    }
+
+    static List<File> collectOwnedDeletionTargets(
+            JSONObject event, File root, File eventFile) {
+        LinkedHashMap<String, File> targets = new LinkedHashMap<>();
+        if (event == null || root == null || eventFile == null) {
+            return new ArrayList<>();
+        }
+        String eventId = event.optString("event_id", "");
+        if (!eventId.matches("[A-Za-z0-9_.-]+")) {
+            return new ArrayList<>();
+        }
+        File session = eventFile.getParentFile();
+        if (session == null || !isInside(root, session) || !isInside(root, eventFile)) {
+            return new ArrayList<>();
+        }
+        File capturedRoot = new File(new File(session, "captured_media"), eventId);
+        File userRoot = new File(new File(session, "user_generated"), eventId);
+        collectOwnedJsonPaths(event, capturedRoot, userRoot, targets);
+        addIfOwned(capturedRoot, capturedRoot, userRoot, targets);
+        addIfOwned(userRoot, capturedRoot, userRoot, targets);
+        addCanonical(eventFile, targets);
+        return new ArrayList<>(targets.values());
+    }
+
+    private static void collectOwnedJsonPaths(
+            Object node,
+            File capturedRoot,
+            File userRoot,
+            LinkedHashMap<String, File> targets) {
+        if (node instanceof JSONObject) {
+            JSONObject object = (JSONObject) node;
+            Iterator<String> keys = object.keys();
+            while (keys.hasNext()) {
+                String key = keys.next();
+                Object value = object.opt(key);
+                if (value instanceof String
+                        && ("path".equals(key)
+                        || "photo_path".equals(key)
+                        || "video_path".equals(key))) {
+                    addIfOwned(
+                            new File((String) value), capturedRoot, userRoot, targets);
+                } else {
+                    collectOwnedJsonPaths(value, capturedRoot, userRoot, targets);
                 }
-            } catch (Exception ignored) {
+            }
+            return;
+        }
+        if (node instanceof JSONArray) {
+            JSONArray array = (JSONArray) node;
+            for (int i = 0; i < array.length(); i++) {
+                collectOwnedJsonPaths(
+                        array.opt(i), capturedRoot, userRoot, targets);
             }
         }
     }
 
-    private void collectMediaPaths(JSONObject container, List<String> out) {
-        if (container == null) {
-            return;
+    private static void addIfOwned(
+            File candidate,
+            File capturedRoot,
+            File userRoot,
+            LinkedHashMap<String, File> targets) {
+        if (isInsideOrSame(capturedRoot, candidate)
+                || isInsideOrSame(userRoot, candidate)) {
+            addCanonical(candidate, targets);
         }
-        Iterator<String> keys = container.keys();
-        while (keys.hasNext()) {
-            String key = keys.next();
-            Object value = container.opt(key);
-            if (value instanceof JSONArray) {
-                JSONArray array = (JSONArray) value;
-                for (int i = 0; i < array.length(); i++) {
-                    JSONObject item = array.optJSONObject(i);
-                    if (item != null && item.has("path")) {
-                        out.add(item.optString("path", null));
-                    }
+    }
+
+    private static void addCanonical(
+            File file, LinkedHashMap<String, File> targets) {
+        try {
+            File canonical = file.getCanonicalFile();
+            targets.put(canonical.getPath(), canonical);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private static boolean isInside(File parent, File child) {
+        return !sameCanonicalFile(parent, child) && isInsideOrSame(parent, child);
+    }
+
+    private static boolean isInsideOrSame(File parent, File child) {
+        if (parent == null || child == null) {
+            return false;
+        }
+        try {
+            String parentPath = parent.getCanonicalPath();
+            String childPath = child.getCanonicalPath();
+            return childPath.equals(parentPath)
+                    || childPath.startsWith(parentPath + File.separator);
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    private static boolean sameCanonicalFile(File left, File right) {
+        if (left == null || right == null) {
+            return false;
+        }
+        try {
+            return left.getCanonicalFile().equals(right.getCanonicalFile());
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    private static boolean deleteRecursively(File target) {
+        if (target == null || !target.exists()) {
+            return true;
+        }
+        boolean success = true;
+        if (target.isDirectory()) {
+            File[] children = target.listFiles();
+            if (children != null) {
+                for (File child : children) {
+                    success = deleteRecursively(child) && success;
                 }
             }
         }
+        return target.delete() && success;
     }
 
     private String newItemId() {

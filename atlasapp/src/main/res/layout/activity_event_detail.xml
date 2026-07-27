@@ -31,6 +31,16 @@
             <TextView android:id="@+id/txtWeather" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginLeft="10dp" android:layout_weight="1" android:textColor="@color/mock_text_primary" />
         </LinearLayout>
         <Button android:id="@+id/btnRefreshContext" android:layout_width="match_parent" android:layout_height="48dp" android:layout_marginTop="10dp" android:background="@drawable/atlas_chip" android:text="@string/btn_refresh" android:textAllCaps="false" android:textColor="@color/mock_text_primary" />
+        <Button
+            android:id="@+id/btnDeleteEvent"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="20dp"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/atlas_chip"
+            android:text="@string/event_delete_button"
+            android:textAllCaps="false"
+            android:textColor="@color/mock_orange_dark" />
 
         <!-- Hidden legacy views: kept only so pre-existing Java field wiring (media preview /
              playback machinery reused by the clip cards) still compiles without a rewrite. -->

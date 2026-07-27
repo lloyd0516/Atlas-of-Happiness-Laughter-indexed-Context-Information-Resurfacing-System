@@ -233,4 +233,27 @@
 
     <!-- Event detail redesign: timestamped notes log inside each clip card -->
     <string name="btn_add_note">Add</string>
+
+    <!-- Resurfacing notifications -->
+    <string name="notification_channel_daily">Daily laughter reviews</string>
+    <string name="notification_channel_daily_description">Yesterday and one-week laughter memories</string>
+    <string name="notification_channel_location">Same-place memories</string>
+    <string name="notification_channel_location_description">Laughter memories near your current place</string>
+    <string name="notification_short_title">A laugh from yesterday</string>
+    <string name="notification_short_body">Yesterday at %1$s, a moment of laughter</string>
+    <string name="notification_long_title">A memory from one week ago</string>
+    <string name="notification_long_body">Around this time last week, you were at %1$s</string>
+    <string name="notification_place_fallback">a familiar place</string>
+    <string name="notification_location_title">A familiar place</string>
+    <string name="notification_location_body">This place holds some memories of laughter</string>
+    <string name="me_reminders_title">Resurfacing reminders</string>
+    <string name="me_daily_reminder">Daily reviews</string>
+    <string name="me_location_reminder">Same-place reminders</string>
+    <string name="reminder_status_on">On</string>
+    <string name="reminder_status_off">Off</string>
+    <string name="reminder_status_permission_needed">On · system permission needed</string>
+    <string name="event_delete_button">Delete this moment</string>
+    <string name="event_delete_confirm">Delete this moment and all of its app-owned media? This cannot be undone.</string>
+    <string name="event_delete_success">Moment deleted.</string>
+    <string name="event_delete_failed">This moment could not be deleted.</string>
 </resources>

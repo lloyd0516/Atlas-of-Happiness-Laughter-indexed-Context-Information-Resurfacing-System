@@ -637,6 +637,9 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
     private List<String> mNoPermissionList = new ArrayList<>();
 
     private final int REQUEST_PERMISSION = 0x100;
+    private final int REQUEST_REMINDER_LOCATION = 0x101;
+    private final int REQUEST_REMINDER_BACKGROUND_LOCATION = 0x102;
+    private final int REQUEST_REMINDER_NOTIFICATIONS = 0x103;
 
     private boolean mHasStorageAndAudioPermission = false;
 
@@ -651,9 +654,13 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
         }
 
         if (mNoPermissionList.size() > 0) {
-            ActivityCompat.requestPermissions(this, permissions, REQUEST_PERMISSION);
+            ActivityCompat.requestPermissions(
+                    this,
+                    mNoPermissionList.toArray(new String[mNoPermissionList.size()]),
+                    REQUEST_PERMISSION);
         } else {
             afterGetStorageAndAudioPermissions();
+            requestInitialReminderPermissions();
         }
     }
 
@@ -661,20 +668,69 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
-        boolean PermissionDeined = false;
-
         if (requestCode == REQUEST_PERMISSION) {
+            boolean permissionDenied = false;
             for (int i = 0; i < grantResults.length; i++) {
                 if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
-                    PermissionDeined = true;
+                    permissionDenied = true;
                     break;
                 }
             }
+            if (permissionDenied) {
+                showSystemPermissionDialog();
+            } else {
+                afterGetStorageAndAudioPermissions();
+                requestInitialReminderPermissions();
+            }
+            return;
         }
-        if (PermissionDeined) {
-            showSystemPermissionDialog();
-        } else {
-            afterGetStorageAndAudioPermissions();
+        if (requestCode == REQUEST_REMINDER_LOCATION) {
+            if (hasPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+                    && Build.VERSION.SDK_INT >= 29
+                    && !hasPermission("android.permission.ACCESS_BACKGROUND_LOCATION")) {
+                ActivityCompat.requestPermissions(
+                        this,
+                        new String[]{"android.permission.ACCESS_BACKGROUND_LOCATION"},
+                        REQUEST_REMINDER_BACKGROUND_LOCATION);
+            } else {
+                requestInitialNotificationPermission();
+            }
+            AtlasResurfacingManager.refreshLocationsAsync(this);
+        } else if (requestCode == REQUEST_REMINDER_BACKGROUND_LOCATION) {
+            requestInitialNotificationPermission();
+            AtlasResurfacingManager.refreshLocationsAsync(this);
+        }
+    }
+
+    private void requestInitialReminderPermissions() {
+        if (!hasPermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
+            ActivityCompat.requestPermissions(
+                    this,
+                    new String[]{
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION},
+                    REQUEST_REMINDER_LOCATION);
+            return;
+        }
+        if (Build.VERSION.SDK_INT >= 29
+                && !hasPermission("android.permission.ACCESS_BACKGROUND_LOCATION")) {
+            ActivityCompat.requestPermissions(
+                    this,
+                    new String[]{"android.permission.ACCESS_BACKGROUND_LOCATION"},
+                    REQUEST_REMINDER_BACKGROUND_LOCATION);
+            return;
+        }
+        requestInitialNotificationPermission();
+        AtlasResurfacingManager.refreshLocationsAsync(this);
+    }
+
+    private void requestInitialNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= 33
+                && !hasPermission("android.permission.POST_NOTIFICATIONS")) {
+            ActivityCompat.requestPermissions(
+                    this,
+                    new String[]{"android.permission.POST_NOTIFICATIONS"},
+                    REQUEST_REMINDER_NOTIFICATIONS);
         }
     }
 

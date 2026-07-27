@@ -12,6 +12,7 @@ public class AtlasApplication extends Application {
     public void onCreate() {
         super.onCreate();
         AtlasDevLogger.i(this, "AtlasApplication", AtlasDevLogger.buildSessionBanner("process_start"));
+        AtlasResurfacingManager.initialize(this);
         previousHandler = Thread.getDefaultUncaughtExceptionHandler();
         Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
             @Override

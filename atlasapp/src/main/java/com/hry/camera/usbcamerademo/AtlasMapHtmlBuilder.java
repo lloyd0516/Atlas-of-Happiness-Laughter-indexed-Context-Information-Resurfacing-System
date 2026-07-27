@@ -21,6 +21,13 @@ public final class AtlasMapHtmlBuilder {
      * rounded coordinate are grouped into one pin card.
      */
     public static String build(List<AtlasReviewRepository.EventSummary> events) {
+        return build(events, null, null);
+    }
+
+    public static String build(
+            List<AtlasReviewRepository.EventSummary> events,
+            Double focusGpsLat,
+            Double focusGpsLng) {
         java.util.LinkedHashMap<String, PinGroup> groups = new java.util.LinkedHashMap<>();
         for (AtlasReviewRepository.EventSummary item : events) {
             double lat = mapLat(item);
@@ -56,6 +63,10 @@ public final class AtlasMapHtmlBuilder {
                     .append('}');
             count += 1;
         }
+        String focus = focusGpsLat == null || focusGpsLng == null
+                ? "null"
+                : "{lat:" + String.format(Locale.US, "%.6f", focusGpsLat)
+                + ",lng:" + String.format(Locale.US, "%.6f", focusGpsLng) + "}";
         return "<!doctype html><html><head>"
                 + "<meta charset='utf-8'>"
                 + "<meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no,width=device-width'>"
@@ -70,13 +81,18 @@ public final class AtlasMapHtmlBuilder {
                 + "<script src='https://webapi.amap.com/maps?v=1.4.15&key=" + htmlEscape(BuildConfig.AMAP_API_KEY) + "'></script>"
                 + "</head><body><div id='map'></div><script>"
                 + "var raw=[" + items.toString() + "];"
+                + "var focus=" + focus + ";"
                 + "var map=new AMap.Map('map',{resizeEnable:true,zoom:13,zooms:[3,19],viewMode:'2D'});"
                 + "map.setDefaultCursor('default');"
                 + "var bounds=[];"
                 + "function esc(s){return String(s||'').replace(/[&<>\"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',\"'\":'&#39;'}[c];});}"
                 + "function content(it){return '<div class=\"pin\"><div class=\"face\"></div><span class=\"label\">'+esc(it.name)+'</span><span class=\"count\">'+it.laughs+'次笑声</span></div>';}"
                 + "function add(it,pos){var m=new AMap.Marker({map:map,position:pos,content:content(it),offset:new AMap.Pixel(-10,-14),anchor:'bottom-left'});bounds.push(pos);}"
-                + "function fit(){if(bounds.length===1){map.setCenter(bounds[0]);map.setZoom(15);}else if(bounds.length>1){map.setFitView();}}"
+                + "function centerFocus(){if(!focus)return;var p=[focus.lng,focus.lat];"
+                + "if(AMap.convertFrom){AMap.convertFrom(p,'gps',function(status,result){"
+                + "if(status==='complete'&&result.locations&&result.locations.length){p=result.locations[0];}"
+                + "map.setCenter(p);map.setZoom(17);});}else{map.setCenter(p);map.setZoom(17);}}"
+                + "function fit(){if(focus){centerFocus();}else if(bounds.length===1){map.setCenter(bounds[0]);map.setZoom(15);}else if(bounds.length>1){map.setFitView();}}"
                 + "var pending=raw.length;"
                 + "function done(){pending--;if(pending<=0)fit();}"
                 + "if(!raw.length){map.setZoom(4);}else{raw.forEach(function(it){var p=[it.lng,it.lat];if(it.coord==='gps'&&AMap.convertFrom){AMap.convertFrom(p,'gps',function(status,result){if(status==='complete'&&result.locations&&result.locations.length){p=result.locations[0];}add(it,p);done();});}else{add(it,p);done();}});}"

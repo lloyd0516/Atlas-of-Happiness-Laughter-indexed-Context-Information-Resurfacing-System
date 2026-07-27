@@ -234,4 +234,27 @@
 
     <!-- 笑声片段卡片：用户笔记时间戳日志 -->
     <string name="btn_add_note">添加</string>
+
+    <!-- 回顾推送 -->
+    <string name="notification_channel_daily">每日回顾</string>
+    <string name="notification_channel_daily_description">昨天与一周前的笑声回忆</string>
+    <string name="notification_channel_location">同地点提醒</string>
+    <string name="notification_channel_location_description">当前位置附近的笑声回忆</string>
+    <string name="notification_short_title">昨天的一段笑声</string>
+    <string name="notification_short_body">昨天 %1$s，一段笑声</string>
+    <string name="notification_long_title">一周前的回忆</string>
+    <string name="notification_long_body">一周前的这时候，你在%1$s</string>
+    <string name="notification_place_fallback">一个熟悉的地方</string>
+    <string name="notification_location_title">熟悉的地方</string>
+    <string name="notification_location_body">这个地方留下过一些笑声回忆</string>
+    <string name="me_reminders_title">回顾提醒</string>
+    <string name="me_daily_reminder">每日回顾推送</string>
+    <string name="me_location_reminder">同地点提醒</string>
+    <string name="reminder_status_on">已开启</string>
+    <string name="reminder_status_off">已关闭</string>
+    <string name="reminder_status_permission_needed">已开启 · 需要系统权限</string>
+    <string name="event_delete_button">删除这个事件</string>
+    <string name="event_delete_confirm">确定删除这个事件及其 App 内关联媒体吗？删除后无法恢复。</string>
+    <string name="event_delete_success">事件已删除。</string>
+    <string name="event_delete_failed">事件删除失败。</string>
 </resources>
