@@ -102,9 +102,7 @@ recognizable when visually reduced to 48 px
 Run:
 
 ```sh
-ANDROID_HOME=/Users/fangjun/Library/Android/sdk \
-ANDROID_SDK_ROOT=/Users/fangjun/Library/Android/sdk \
-JAVA_HOME=/Users/fangjun/Library/Java/JavaVirtualMachines/corretto-1.8.0_492/Contents/Home \
+# Configure ANDROID_HOME, ANDROID_SDK_ROOT, and a JDK 8 JAVA_HOME for the local machine first.
 sh gradlew :atlasapp:assembleDebug --console=plain --quiet
 ```
 
