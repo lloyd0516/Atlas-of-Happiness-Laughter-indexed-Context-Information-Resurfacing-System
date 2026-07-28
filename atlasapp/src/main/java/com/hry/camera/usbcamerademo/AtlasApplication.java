@@ -33,8 +33,14 @@ public class AtlasApplication extends Application {
         registerActivityLifecycleCallbacks(new ActivityLifecycleCallbacks() {
             @Override public void onActivityCreated(Activity activity, Bundle savedInstanceState) { log(activity, "created"); }
             @Override public void onActivityStarted(Activity activity) { log(activity, "started"); }
-            @Override public void onActivityResumed(Activity activity) { log(activity, "resumed"); }
-            @Override public void onActivityPaused(Activity activity) { log(activity, "paused"); }
+            @Override public void onActivityResumed(Activity activity) {
+                log(activity, "resumed");
+                ResearchScreenTracker.onResumed(activity);
+            }
+            @Override public void onActivityPaused(Activity activity) {
+                ResearchScreenTracker.onPaused(activity);
+                log(activity, "paused");
+            }
             @Override public void onActivityStopped(Activity activity) { log(activity, "stopped"); }
             @Override public void onActivitySaveInstanceState(Activity activity, Bundle outState) { log(activity, "save_instance_state"); }
             @Override public void onActivityDestroyed(Activity activity) { log(activity, "destroyed"); }

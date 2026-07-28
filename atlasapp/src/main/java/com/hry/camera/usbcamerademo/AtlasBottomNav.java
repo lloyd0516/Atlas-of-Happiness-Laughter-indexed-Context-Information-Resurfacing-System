@@ -51,6 +51,7 @@ public final class AtlasBottomNav {
                 }
                 Intent intent = new Intent(activity, target);
                 intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_NEW_TASK);
+                ResearchNavigation.withSource(intent, "bottom_navigation");
                 activity.startActivity(intent);
                 return true;
             }

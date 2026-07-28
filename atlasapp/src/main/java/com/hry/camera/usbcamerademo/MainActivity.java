@@ -1538,6 +1538,7 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
             if (endedSessionId != null && endedSessionId.length() > 0) {
                 Intent intent = new Intent(this, SupplementPickerActivity.class);
                 intent.putExtra("session_id", endedSessionId);
+                ResearchNavigation.withSource(intent, "session_stop");
                 startActivity(intent);
             }
         } else {
