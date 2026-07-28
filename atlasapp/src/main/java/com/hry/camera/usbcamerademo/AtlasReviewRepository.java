@@ -952,18 +952,9 @@ public class AtlasReviewRepository {
         JSONArray audioClips = new JSONArray();
 
         JSONObject assets = raw.optJSONObject("assets");
-        String videoPath = assets != null ? optNonEmpty(assets, "video") : null;
-        String videoContentUri = assets != null ? optNonEmpty(assets, "video_content_uri") : null;
-        if (!TextUtils.isEmpty(videoPath)) {
-            JSONObject video = new JSONObject();
-            video.put("video_path", videoPath);
-            if (!TextUtils.isEmpty(videoContentUri)) {
-                video.put("content_uri", videoContentUri);
-            }
-            video.put("timestamp", isoFormat.format(new Date(startMs)));
-            video.put("linked_period_id", firstArrayString(raw.optJSONArray("laughter_period_ids"), firstArrayString(raw.optJSONArray("period_ids"), "")));
-            videos.put(video);
-        }
+        String eventLinkedPeriodId = firstArrayString(
+                raw.optJSONArray("laughter_period_ids"),
+                firstArrayString(raw.optJSONArray("period_ids"), ""));
         JSONArray eventVideos = assets != null ? assets.optJSONArray("videos") : null;
         if (eventVideos != null) {
             for (int i = 0; i < eventVideos.length(); i++) {
@@ -979,27 +970,82 @@ public class AtlasReviewRepository {
                 if (TextUtils.isEmpty(path) || containsVideoPath(videos, path)) {
                     continue;
                 }
-                JSONObject video = new JSONObject();
-                video.put("video_path", path);
-                if (!TextUtils.isEmpty(contentUri)) {
-                    video.put("content_uri", contentUri);
+                JSONObject timeSource = rawVideo != null
+                        ? rawVideo
+                        : new JSONObject().put("path", path);
+                appendNormalizedVideo(
+                        videos,
+                        path,
+                        contentUri,
+                        timeSource,
+                        "path",
+                        startMs,
+                        endMs,
+                        rawVideo != null
+                                ? rawVideo.optString(
+                                        "linked_period_id",
+                                        eventLinkedPeriodId)
+                                : eventLinkedPeriodId);
+            }
+        }
+        String videoPath = assets != null ? optNonEmpty(assets, "video") : null;
+        String videoContentUri = assets != null
+                ? optNonEmpty(assets, "video_content_uri")
+                : null;
+        if (!TextUtils.isEmpty(videoPath)
+                && !containsVideoPath(videos, videoPath)) {
+            JSONObject timeSource =
+                    new JSONObject().put("video_path", videoPath);
+            appendNormalizedVideo(
+                    videos,
+                    videoPath,
+                    videoContentUri,
+                    timeSource,
+                    "video_path",
+                    startMs,
+                    endMs,
+                    eventLinkedPeriodId);
+        }
+        JSONArray photoRecords = assets != null
+                ? assets.optJSONArray("photo_records")
+                : null;
+        if (photoRecords != null) {
+            for (int i = 0; i < photoRecords.length(); i++) {
+                JSONObject rawPhoto = photoRecords.optJSONObject(i);
+                if (rawPhoto == null) {
+                    continue;
                 }
-                video.put("timestamp", isoFormat.format(new Date(startMs)));
-                videos.put(video);
+                String path = optNonEmpty(rawPhoto, "path");
+                if (TextUtils.isEmpty(path)
+                        || containsPhotoPath(photos, path)) {
+                    continue;
+                }
+                appendNormalizedPhoto(
+                        photos,
+                        path,
+                        rawPhoto,
+                        "path",
+                        startMs,
+                        endMs,
+                        "auto_photo");
             }
         }
         JSONArray eventPhotos = assets != null ? assets.optJSONArray("photos") : null;
         if (eventPhotos != null) {
             for (int i = 0; i < eventPhotos.length(); i++) {
                 String path = eventPhotos.optString(i, null);
-                if (TextUtils.isEmpty(path)) {
+                if (TextUtils.isEmpty(path)
+                        || containsPhotoPath(photos, path)) {
                     continue;
                 }
-                JSONObject photo = new JSONObject();
-                photo.put("photo_path", path);
-                photo.put("timestamp", isoFormat.format(new Date(startMs)));
-                photo.put("source", "video_frame");
-                photos.put(photo);
+                appendNormalizedPhoto(
+                        photos,
+                        path,
+                        new JSONObject().put("photo_path", path),
+                        "photo_path",
+                        startMs,
+                        endMs,
+                        "legacy_auto_photo");
             }
         }
 
@@ -1078,11 +1124,14 @@ public class AtlasReviewRepository {
                             if (TextUtils.isEmpty(path) || containsPhotoPath(photos, path)) {
                                 continue;
                             }
-                            JSONObject photo = new JSONObject();
-                            photo.put("photo_path", path);
-                            photo.put("timestamp", isoFormat.format(new Date(period.optLong("device_start_ms", startMs))));
-                            photo.put("source", "video_frame");
-                            photos.put(photo);
+                            appendNormalizedPhoto(
+                                    photos,
+                                    path,
+                                    new JSONObject().put("photo_path", path),
+                                    "photo_path",
+                                    startMs,
+                                    endMs,
+                                    "period_asset");
                         }
                     }
                 }
@@ -1109,6 +1158,72 @@ public class AtlasReviewRepository {
 
         ensureMeta(normalized, sessionDir, eventFile);
         return normalized;
+    }
+
+    private void appendNormalizedVideo(
+            JSONArray videos,
+            String path,
+            String contentUri,
+            JSONObject timeSource,
+            String timePathKey,
+            long eventStartMs,
+            long eventEndMs,
+            String linkedPeriodId) throws JSONException {
+        JSONObject video = new JSONObject();
+        video.put("video_path", path);
+        if (!TextUtils.isEmpty(contentUri)) {
+            video.put("content_uri", contentUri);
+        }
+        if (!TextUtils.isEmpty(linkedPeriodId)) {
+            video.put("linked_period_id", linkedPeriodId);
+        }
+        putResolvedCaptureTime(
+                video,
+                timeSource,
+                timePathKey,
+                eventStartMs,
+                eventEndMs);
+        videos.put(video);
+    }
+
+    private void appendNormalizedPhoto(
+            JSONArray photos,
+            String path,
+            JSONObject timeSource,
+            String timePathKey,
+            long eventStartMs,
+            long eventEndMs,
+            String source) throws JSONException {
+        JSONObject photo = new JSONObject();
+        photo.put("photo_path", path);
+        if (!TextUtils.isEmpty(source)) {
+            photo.put("source", source);
+        }
+        putResolvedCaptureTime(
+                photo,
+                timeSource,
+                timePathKey,
+                eventStartMs,
+                eventEndMs);
+        photos.put(photo);
+    }
+
+    private void putResolvedCaptureTime(
+            JSONObject target,
+            JSONObject timeSource,
+            String timePathKey,
+            long eventStartMs,
+            long eventEndMs) throws JSONException {
+        long captureTimeMs = AtlasMediaCaptureTimeResolver.resolve(
+                timeSource,
+                timePathKey,
+                eventStartMs,
+                eventEndMs);
+        if (captureTimeMs <= 0L) {
+            return;
+        }
+        target.put("capture_time_ms", captureTimeMs);
+        target.put("timestamp", isoFormat.format(new Date(captureTimeMs)));
     }
 
     private boolean isEventJsonFile(File file) {
@@ -1140,6 +1255,60 @@ public class AtlasReviewRepository {
         }
         if (!event.has("end_time_ms")) {
             event.put("end_time_ms", event.optLong("start_time_ms", 0L));
+        }
+        backfillMediaCaptureTimes(event, auto);
+    }
+
+    private void backfillMediaCaptureTimes(
+            JSONObject event,
+            JSONObject auto) throws JSONException {
+        long startMs = event.optLong(
+                "start_time_ms",
+                event.optLong("device_start_ms", 0L));
+        long endMs = Math.max(
+                startMs,
+                event.optLong(
+                        "end_time_ms",
+                        event.optLong("device_end_ms", startMs)));
+        backfillMediaArrayCaptureTimes(
+                auto.optJSONArray("photos"),
+                "photo_path",
+                startMs,
+                endMs);
+        backfillMediaArrayCaptureTimes(
+                auto.optJSONArray("videos"),
+                "video_path",
+                startMs,
+                endMs);
+    }
+
+    private void backfillMediaArrayCaptureTimes(
+            JSONArray items,
+            String pathKey,
+            long eventStartMs,
+            long eventEndMs) throws JSONException {
+        if (items == null) {
+            return;
+        }
+        for (int i = 0; i < items.length(); i++) {
+            JSONObject item = items.optJSONObject(i);
+            if (item == null) {
+                continue;
+            }
+            long captureTimeMs = AtlasMediaCaptureTimeResolver.resolve(
+                    item,
+                    pathKey,
+                    eventStartMs,
+                    eventEndMs);
+            if (captureTimeMs > 0L) {
+                item.put("capture_time_ms", captureTimeMs);
+                item.put(
+                        "timestamp",
+                        isoFormat.format(new Date(captureTimeMs)));
+            } else {
+                item.remove("capture_time_ms");
+                item.remove("timestamp");
+            }
         }
     }
 

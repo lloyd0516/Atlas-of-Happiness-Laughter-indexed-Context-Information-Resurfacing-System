@@ -59,6 +59,12 @@ public final class AppConfig {
     /** Increment when the analysis or gain algorithm changes so old cache entries are ignored. */
     public static final int LAUGHTER_PLAYBACK_ALGORITHM_VERSION = 1;
 
+    // ---- Laughter clip media association ----
+    /** Each clip may use media captured within this symmetric time window. */
+    public static final long CLIP_MEDIA_MATCH_WINDOW_MS = 90L * 1000L;
+    /** Photos and videos are matched independently, with this per-type maximum. */
+    public static final int CLIP_MEDIA_MAX_PER_TYPE = 1;
+
     /**
      * Auto photo/video capture is rate-limited to at most once per this many clips.
      * Requirement: changed from 2*clip (60s @ 30s clips) to 4*clip (120s @ 30s clips).
