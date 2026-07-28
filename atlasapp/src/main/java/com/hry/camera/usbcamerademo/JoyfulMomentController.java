@@ -3,6 +3,7 @@ package com.hry.camera.usbcamerademo;
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -67,8 +68,9 @@ public class JoyfulMomentController {
     private String sessionId;
     private String participantNumber = "00";
     private long sessionStartMs;
+    private long sessionStartElapsedMs;
     private File sessionDir;
-    private boolean sessionRunning;
+    private volatile boolean sessionRunning;
 
     private final HashMap<Integer, ClipState> clipStates = new HashMap<>();
     private final HashMap<String, ActiveDetection> activeDetections = new HashMap<>();
@@ -133,6 +135,7 @@ public class JoyfulMomentController {
         sessionId = eventStore.newSessionId();
         sessionDir = eventStore.createSessionDir(sessionId);
         sessionStartMs = System.currentTimeMillis();
+        sessionStartElapsedMs = SystemClock.elapsedRealtime();
         sessionRunning = true;
         latestClosedClipId = -1;
         nextDetectionNumber = 1;
@@ -209,15 +212,36 @@ public class JoyfulMomentController {
                         finalizeRemainingClips(true);
                         finalizeCurrentEvent("engine_stopped");
                         writeSessionSummary("engine_stopped");
+                        if (sessionRunning) {
+                            sessionRunning = false;
+                            ResearchSessionTracker.stop(
+                                    context,
+                                    sessionId,
+                                    "engine_stopped",
+                                    detectionRecords.size(),
+                                    eventRecords.size(),
+                                    sessionStartElapsedMs,
+                                    SystemClock.elapsedRealtime());
+                        }
                         emitStatus(buildStatusText());
                     }
                 }
         );
         realtimeEngine.start();
+        ResearchSessionTracker.start(
+                context,
+                participantNumber,
+                sessionId,
+                sessionStartMs,
+                sessionStartElapsedMs);
         emitStatus(buildStatusText());
     }
 
     public synchronized void stopSession() {
+        stopSession("unspecified");
+    }
+
+    public synchronized void stopSession(String stopReason) {
         if (!sessionRunning) {
             return;
         }
@@ -231,6 +255,14 @@ public class JoyfulMomentController {
         }
         finalizeCurrentEvent("session_stopped");
         writeSessionSummary("stopped");
+        ResearchSessionTracker.stop(
+                context,
+                sessionId,
+                stopReason,
+                detectionRecords.size(),
+                eventRecords.size(),
+                sessionStartElapsedMs,
+                SystemClock.elapsedRealtime());
         emitStatus(buildStatusText());
     }
 

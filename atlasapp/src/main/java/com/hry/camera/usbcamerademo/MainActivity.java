@@ -393,7 +393,7 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
             mCameraThread = null;
         }
         if (mJoyfulController != null) {
-            mJoyfulController.stopSession();
+            mJoyfulController.stopSession("activity_destroyed");
         }
         AtlasForegroundService.stopKeepAlive(this);
 
@@ -1529,7 +1529,7 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
         }
         if (mJoyfulController.isSessionRunning()) {
             String endedSessionId = mJoyfulController.getSessionId();
-            mJoyfulController.stopSession();
+            mJoyfulController.stopSession("user");
             AtlasForegroundService.stopKeepAlive(this);
             AtlasDevLogger.session(this, TAG, "Joyful session stopped by user");
             Toast.makeText(this, "Joyful session stopped", Toast.LENGTH_SHORT).show();

@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.Application;
 import android.os.Bundle;
 import android.content.ComponentCallbacks2;
+import android.os.SystemClock;
 
 public class AtlasApplication extends Application {
     private Thread.UncaughtExceptionHandler previousHandler;
@@ -11,6 +12,11 @@ public class AtlasApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+        ResearchInteractionLogger.initialize(this);
+        ResearchSessionTracker.recoverInterrupted(
+                this,
+                System.currentTimeMillis(),
+                SystemClock.elapsedRealtime());
         AtlasDevLogger.i(this, "AtlasApplication", AtlasDevLogger.buildSessionBanner("process_start"));
         AtlasResurfacingManager.initialize(this);
         previousHandler = Thread.getDefaultUncaughtExceptionHandler();
