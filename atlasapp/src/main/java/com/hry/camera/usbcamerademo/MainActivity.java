@@ -107,6 +107,7 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
     private boolean mJoyfulAutoRecording = false;
     private boolean mLastRecordWasJoyfulAuto = false;
     private String mActiveJoyfulAutoVideoEventId = null;
+    private long mActiveJoyfulAutoVideoCaptureTimeMs = 0L;
     private String mPendingJoyfulAutoVideoEventId = null;
     private int mPendingJoyfulAutoPhotos = 0;
     private int mQueuedJoyfulAutoPhotos = 0;
@@ -917,6 +918,7 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
         mPendingJoyfulAutoVideoDurationSec = 0;
         mPendingJoyfulAutoVideoEventId = null;
         mActiveJoyfulAutoVideoEventId = null;
+        mActiveJoyfulAutoVideoCaptureTimeMs = 0L;
         while (mQueuedJoyfulAutoPhotos > 0) {
             if (mJoyfulController != null) {
                 mJoyfulController.onAutoPhotoCaptureSkipped(reason);
@@ -957,9 +959,12 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
             mPendingJoyfulAutoVideoDurationSec = 0;
             mJoyfulAutoRecording = true;
             mActiveJoyfulAutoVideoEventId = mPendingJoyfulAutoVideoEventId;
+            mActiveJoyfulAutoVideoCaptureTimeMs = System.currentTimeMillis();
             mPendingJoyfulAutoVideoEventId = null;
             if (mJoyfulController != null) {
-                mJoyfulController.onAutoVideoCaptureStarted();
+                mJoyfulController.onAutoVideoCaptureStarted(
+                        mActiveJoyfulAutoVideoEventId,
+                        mActiveJoyfulAutoVideoCaptureTimeMs);
             }
             Toast.makeText(MainActivity.this, "Joyful auto video started", Toast.LENGTH_SHORT).show();
             startRecord();
@@ -969,6 +974,7 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
             } else {
                 mJoyfulAutoRecording = false;
                 mActiveJoyfulAutoVideoEventId = null;
+                mActiveJoyfulAutoVideoCaptureTimeMs = 0L;
                 if (mJoyfulController != null) {
                     mJoyfulController.onAutoVideoCaptureSkipped("record_start_failed");
                 }
@@ -1180,7 +1186,11 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
                   // 显示提示消息
                   Toast.makeText(MainActivity.this, "视频已完成录制!", Toast.LENGTH_SHORT).show();
                   if (mLastRecordWasJoyfulAuto && mJoyfulController != null) {
-                      mJoyfulController.onAutoVideoSaved(mActiveJoyfulAutoVideoEventId, mMediaVideoPath, uri != null ? uri.toString() : null);
+                      mJoyfulController.onAutoVideoSaved(
+                              mActiveJoyfulAutoVideoEventId,
+                              mMediaVideoPath,
+                              uri != null ? uri.toString() : null,
+                              mActiveJoyfulAutoVideoCaptureTimeMs);
                       Toast.makeText(MainActivity.this, "Joyful auto video saved", Toast.LENGTH_SHORT).show();
                   }
               }
@@ -1190,6 +1200,7 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
               mJoyfulAutoRecording = false;
               mLastRecordWasJoyfulAuto = false;
               mActiveJoyfulAutoVideoEventId = null;
+              mActiveJoyfulAutoVideoCaptureTimeMs = 0L;
 
             this.mRecordBtn.setText("录像");
             maybeSleepJoyfulAutoCamera();
@@ -1432,7 +1443,10 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
                 mFileUtil.broadcastNewImage(MainActivity.this, uri);
                 final String joyfulAutoPhotoEventId = consumePendingJoyfulAutoPhoto();
                 if (joyfulAutoPhotoEventId != null && mJoyfulController != null) {
-                    mJoyfulController.onAutoPhotoSaved(joyfulAutoPhotoEventId, path);
+                    mJoyfulController.onAutoPhotoSaved(
+                            joyfulAutoPhotoEventId,
+                            path,
+                            dateTaken);
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {

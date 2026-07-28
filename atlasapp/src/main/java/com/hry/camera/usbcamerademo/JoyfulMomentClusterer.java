@@ -78,6 +78,31 @@ public class JoyfulMomentClusterer {
         }
     }
 
+    public static final class MediaAssetRecord {
+        public final String path;
+        public final String contentUri;
+        public final long captureTimeMs;
+
+        public MediaAssetRecord(
+                String path,
+                String contentUri,
+                long captureTimeMs) {
+            this.path = path;
+            this.contentUri = contentUri;
+            this.captureTimeMs = captureTimeMs;
+        }
+
+        JSONObject toJson() throws JSONException {
+            JSONObject json = new JSONObject();
+            json.put("path", path);
+            if (contentUri != null) {
+                json.put("content_uri", contentUri);
+            }
+            json.put("capture_time_ms", captureTimeMs);
+            return json;
+        }
+    }
+
     public static class EventRecord {
         public String eventId;
         public int eventIndex;
@@ -98,6 +123,8 @@ public class JoyfulMomentClusterer {
         public final List<String> videoPaths = new ArrayList<>();
         public final List<String> videoContentUris = new ArrayList<>();
         public final List<String> photoPaths = new ArrayList<>();
+        public final List<MediaAssetRecord> videoAssets = new ArrayList<>();
+        public final List<MediaAssetRecord> photoAssets = new ArrayList<>();
 
         public JSONObject toJson() throws JSONException {
             JSONObject json = new JSONObject();
@@ -122,16 +149,28 @@ public class JoyfulMomentClusterer {
             assets.put("video", videoPath == null ? JSONObject.NULL : videoPath);
             assets.put("video_content_uri", videoContentUri == null ? JSONObject.NULL : videoContentUri);
             JSONArray videos = new JSONArray();
-            for (int i = 0; i < videoPaths.size(); i++) {
-                JSONObject video = new JSONObject();
-                video.put("path", videoPaths.get(i));
-                if (i < videoContentUris.size() && videoContentUris.get(i) != null) {
-                    video.put("content_uri", videoContentUris.get(i));
+            if (!videoAssets.isEmpty()) {
+                for (MediaAssetRecord asset : videoAssets) {
+                    videos.put(asset.toJson());
                 }
-                videos.put(video);
+            } else {
+                for (int i = 0; i < videoPaths.size(); i++) {
+                    JSONObject video = new JSONObject();
+                    video.put("path", videoPaths.get(i));
+                    if (i < videoContentUris.size()
+                            && videoContentUris.get(i) != null) {
+                        video.put("content_uri", videoContentUris.get(i));
+                    }
+                    videos.put(video);
+                }
             }
             assets.put("videos", videos);
             assets.put("photos", new JSONArray(photoPaths));
+            JSONArray photoRecords = new JSONArray();
+            for (MediaAssetRecord asset : photoAssets) {
+                photoRecords.put(asset.toJson());
+            }
+            assets.put("photo_records", photoRecords);
             json.put("assets", assets);
             return json;
         }

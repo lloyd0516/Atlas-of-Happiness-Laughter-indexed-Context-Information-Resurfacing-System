@@ -989,10 +989,19 @@ public class JoyfulMomentController {
     }
 
     public synchronized void onAutoVideoCaptureStarted() {
+        onAutoVideoCaptureStarted(
+                lastTriggeredEventId,
+                System.currentTimeMillis());
+    }
+
+    public synchronized void onAutoVideoCaptureStarted(
+            String eventId,
+            long captureTimeMs) {
         JSONObject json = new JSONObject();
         try {
             json.put("type", "asset.auto_video.started");
-            json.put("event_id", lastTriggeredEventId);
+            json.put("event_id", eventId);
+            json.put("capture_time_ms", captureTimeMs);
         } catch (JSONException ignored) {
         }
         appendJson("detection_log.jsonl", json);
@@ -1007,12 +1016,32 @@ public class JoyfulMomentController {
     }
 
     public synchronized void onAutoVideoSaved(String path, String contentUri) {
-        onAutoVideoSaved(lastTriggeredEventId, path, contentUri);
+        onAutoVideoSaved(
+                lastTriggeredEventId,
+                path,
+                contentUri,
+                System.currentTimeMillis());
     }
 
     public synchronized void onAutoVideoSaved(String eventId, String path, String contentUri) {
+        onAutoVideoSaved(
+                eventId,
+                path,
+                contentUri,
+                System.currentTimeMillis());
+    }
+
+    public synchronized void onAutoVideoSaved(
+            String eventId,
+            String path,
+            String contentUri,
+            long captureTimeMs) {
         if (path == null) {
-            appendAssetStatus("asset.auto_video.save_failed", "missing_path", null);
+            appendAssetStatus(
+                    "asset.auto_video.save_failed",
+                    eventId,
+                    "missing_path",
+                    null);
             return;
         }
         String stablePath = copyAssetIntoSession(eventId, path, "videos", "event_video");
@@ -1026,6 +1055,13 @@ public class JoyfulMomentController {
             if (!eventRecord.videoPaths.contains(stablePath)) {
                 eventRecord.videoPaths.add(stablePath);
                 eventRecord.videoContentUris.add(contentUri);
+                eventRecord.videoAssets.add(
+                        new JoyfulMomentClusterer.MediaAssetRecord(
+                                stablePath,
+                                contentUri,
+                                captureTimeMs > 0L
+                                        ? captureTimeMs
+                                        : System.currentTimeMillis()));
             }
             appendJson("event_log.jsonl", safeJson(eventRecord));
             writeEventRecord(eventRecord);
@@ -1034,12 +1070,29 @@ public class JoyfulMomentController {
     }
 
     public synchronized void onAutoPhotoSaved(String path) {
-        onAutoPhotoSaved(lastTriggeredEventId, path);
+        onAutoPhotoSaved(
+                lastTriggeredEventId,
+                path,
+                System.currentTimeMillis());
     }
 
     public synchronized void onAutoPhotoSaved(String eventId, String path) {
+        onAutoPhotoSaved(
+                eventId,
+                path,
+                System.currentTimeMillis());
+    }
+
+    public synchronized void onAutoPhotoSaved(
+            String eventId,
+            String path,
+            long captureTimeMs) {
         if (path == null) {
-            appendAssetStatus("asset.auto_photo.save_failed", "missing_path", null);
+            appendAssetStatus(
+                    "asset.auto_photo.save_failed",
+                    eventId,
+                    "missing_path",
+                    null);
             return;
         }
         String stablePath = copyAssetIntoSession(eventId, path, "photos", "event_photo");
@@ -1049,6 +1102,13 @@ public class JoyfulMomentController {
         JoyfulMomentClusterer.EventRecord eventRecord = findEventById(eventId);
         if (eventRecord != null && !eventRecord.photoPaths.contains(stablePath)) {
             eventRecord.photoPaths.add(stablePath);
+            eventRecord.photoAssets.add(
+                    new JoyfulMomentClusterer.MediaAssetRecord(
+                            stablePath,
+                            null,
+                            captureTimeMs > 0L
+                                    ? captureTimeMs
+                                    : System.currentTimeMillis()));
             appendJson("event_log.jsonl", safeJson(eventRecord));
             writeEventRecord(eventRecord);
         }
