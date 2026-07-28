@@ -5,6 +5,7 @@ import org.junit.Test;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class AtlasCardCarouselStateTest {
     @Test
@@ -53,5 +54,17 @@ public class AtlasCardCarouselStateTest {
         assertEquals(1, slots.get(0).dataIndex);
         assertEquals(AtlasCardCarouselState.Role.CURRENT, slots.get(1).role);
         assertEquals(0, slots.get(1).dataIndex);
+    }
+
+    @Test
+    public void reportsDeterministicPositionChanges() {
+        AtlasCardCarouselState state =
+                new AtlasCardCarouselState(3);
+
+        assertEquals(0, state.currentIndex());
+        assertTrue(state.moveNext());
+        assertEquals(1, state.currentIndex());
+        assertTrue(state.movePrevious());
+        assertEquals(0, state.currentIndex());
     }
 }

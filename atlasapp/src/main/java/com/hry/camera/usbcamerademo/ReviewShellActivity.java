@@ -38,6 +38,13 @@ public class ReviewShellActivity extends AppCompatActivity {
     private TabLayout reviewTabLayout;
     private Double focusedMapLat;
     private Double focusedMapLng;
+    private int lastReviewTab = -1;
+    private int lastMapCardPosition = -1;
+    private String pendingMapNavigationMethod;
+    private String pendingTabSelectionSource;
+    private boolean bindingMapCarousel;
+    private boolean activityStarted;
+    private boolean mapOpenedThisVisit;
 
     private View tabMapContent;
     private View tabCalendarContent;
@@ -98,12 +105,15 @@ public class ReviewShellActivity extends AppCompatActivity {
         btnMapStackPrevious.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                pendingMapNavigationMethod =
+                        "previous_button";
                 mapEventStack.showPrevious();
             }
         });
         btnMapStackNext.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                pendingMapNavigationMethod = "next_button";
                 mapEventStack.showNext();
             }
         });
@@ -111,6 +121,37 @@ public class ReviewShellActivity extends AppCompatActivity {
             @Override
             public void onPositionChanged(int zeroBasedPosition, int total) {
                 updateMapCarouselControls(zeroBasedPosition, total);
+                if (bindingMapCarousel) {
+                    lastMapCardPosition = zeroBasedPosition;
+                    pendingMapNavigationMethod = null;
+                    return;
+                }
+                if (lastMapCardPosition < 0) {
+                    lastMapCardPosition = zeroBasedPosition;
+                    pendingMapNavigationMethod = null;
+                    return;
+                }
+                if (zeroBasedPosition != lastMapCardPosition) {
+                    ResearchInteractionLogger.log(
+                            ReviewShellActivity.this,
+                            ResearchEventNames.MAP_CARD_CHANGED,
+                            null,
+                            null,
+                            null,
+                            ResearchInteractionLogger.properties(
+                                    "from_index",
+                                    lastMapCardPosition,
+                                    "to_index",
+                                    zeroBasedPosition,
+                                    "total", total,
+                                    "navigation_method",
+                                    TextUtils.isEmpty(
+                                            pendingMapNavigationMethod)
+                                            ? "swipe"
+                                            : pendingMapNavigationMethod));
+                    lastMapCardPosition = zeroBasedPosition;
+                }
+                pendingMapNavigationMethod = null;
             }
         });
         setUpMapWebView();
@@ -122,6 +163,7 @@ public class ReviewShellActivity extends AppCompatActivity {
         findViewById(R.id.btnCalendarPrevMonth).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                logCalendarMonthChange("previous");
                 calendarCursor.add(Calendar.MONTH, -1);
                 selectedDayStartMs = null;
                 renderCalendar();
@@ -130,6 +172,7 @@ public class ReviewShellActivity extends AppCompatActivity {
         findViewById(R.id.btnCalendarNextMonth).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                logCalendarMonthChange("next");
                 calendarCursor.add(Calendar.MONTH, 1);
                 selectedDayStartMs = null;
                 renderCalendar();
@@ -143,7 +186,11 @@ public class ReviewShellActivity extends AppCompatActivity {
         reviewTabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
             public void onTabSelected(TabLayout.Tab tab) {
-                showTab(tab.getPosition());
+                String source = TextUtils.isEmpty(
+                        pendingTabSelectionSource)
+                        ? "user" : pendingTabSelectionSource;
+                pendingTabSelectionSource = null;
+                showTab(tab.getPosition(), source);
             }
 
             @Override
@@ -157,6 +204,22 @@ public class ReviewShellActivity extends AppCompatActivity {
 
         AtlasBottomNav.setup(this, AtlasBottomNav.TAB_REVIEW);
         applyNavigationIntent(getIntent());
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        activityStarted = true;
+        mapOpenedThisVisit = false;
+        if (lastReviewTab == 0) {
+            logMapOpenedIfNeeded();
+        }
+    }
+
+    @Override
+    protected void onStop() {
+        activityStarted = false;
+        super.onStop();
     }
 
     @Override
@@ -194,15 +257,76 @@ public class ReviewShellActivity extends AppCompatActivity {
         }
         TabLayout.Tab mapTab = reviewTabLayout.getTabAt(0);
         if (mapTab != null) {
+            pendingTabSelectionSource =
+                    "navigation_intent";
             mapTab.select();
         }
-        showTab(0);
+        showTab(0, "navigation_intent");
+        pendingTabSelectionSource = null;
     }
 
-    private void showTab(int position) {
+    private void showTab(int position, String selectionSource) {
         tabMapContent.setVisibility(position == 0 ? View.VISIBLE : View.GONE);
         tabCalendarContent.setVisibility(position == 1 ? View.VISIBLE : View.GONE);
         tabTimelineContent.setVisibility(position == 2 ? View.VISIBLE : View.GONE);
+        if (position != lastReviewTab) {
+            ResearchInteractionLogger.log(
+                    this,
+                    ResearchEventNames.REVIEW_TAB_SELECTED,
+                    null,
+                    null,
+                    null,
+                    ResearchInteractionLogger.properties(
+                            "tab", reviewTabName(position),
+                            "selection_source",
+                            selectionSource));
+            lastReviewTab = position;
+        }
+        if (position == 0) {
+            logMapOpenedIfNeeded();
+        }
+    }
+
+    private String reviewTabName(int position) {
+        if (position == 1) {
+            return "calendar";
+        }
+        if (position == 2) {
+            return "timeline";
+        }
+        return "map";
+    }
+
+    private void logMapOpenedIfNeeded() {
+        if (!activityStarted || mapOpenedThisVisit) {
+            return;
+        }
+        mapOpenedThisVisit = true;
+        ResearchInteractionLogger.log(
+                this,
+                ResearchEventNames.MAP_OPENED,
+                null,
+                null,
+                null,
+                ResearchInteractionLogger.properties(
+                        "entry_source",
+                        ResearchNavigation.source(
+                                getIntent(), "review_tab"),
+                        "legacy", false,
+                        "focused_from_notification",
+                        focusedMapLat != null
+                                && focusedMapLng != null));
+    }
+
+    private void logCalendarMonthChange(String direction) {
+        ResearchInteractionLogger.log(
+                this,
+                ResearchEventNames.REVIEW_CALENDAR_MONTH_CHANGED,
+                null,
+                null,
+                null,
+                ResearchInteractionLogger.properties(
+                        "direction", direction));
     }
 
     // ---------------------------------------------------------------------------------------
@@ -238,6 +362,8 @@ public class ReviewShellActivity extends AppCompatActivity {
             }
         }
         if (located.isEmpty()) {
+            lastMapCardPosition = -1;
+            pendingMapNavigationMethod = null;
             mapEmptyView.setVisibility(View.VISIBLE);
             mapStatsPill.setVisibility(View.GONE);
             mapTrailSummary.setVisibility(View.GONE);
@@ -270,6 +396,7 @@ public class ReviewShellActivity extends AppCompatActivity {
                 ? getString(R.string.map_trail_summary_generic, located.size())
                 : getString(R.string.map_trail_summary, located.size(), topLocation));
 
+        bindingMapCarousel = true;
         mapEventStack.setAdapter(R.layout.item_map_stack_card, located.size(), new StackedCardView.Binder() {
             @Override
             public void bind(View card, int position) {
@@ -283,9 +410,22 @@ public class ReviewShellActivity extends AppCompatActivity {
         mapEventStack.setOnCardClickListener(new StackedCardView.OnCardClickListener() {
             @Override
             public void onCardClick(int position) {
-                openEvent(located.get(position));
+                AtlasReviewRepository.EventSummary event =
+                        located.get(position);
+                ResearchInteractionLogger.log(
+                        ReviewShellActivity.this,
+                        ResearchEventNames.MAP_MOMENT_OPENED,
+                        event.sessionId,
+                        event.eventId,
+                        null,
+                        ResearchInteractionLogger.properties(
+                                "card_index", position,
+                                "total", located.size(),
+                                "map_variant", "review_shell"));
+                openEvent(event, "map_card");
             }
         });
+        bindingMapCarousel = false;
     }
 
     private void updateMapCarouselControls(int zeroBasedPosition, int total) {
@@ -304,10 +444,14 @@ public class ReviewShellActivity extends AppCompatActivity {
         btnMapStackNext.setAlpha(canMove ? 1f : 0.4f);
     }
 
-    private void openEvent(AtlasReviewRepository.EventSummary event) {
+    private void openEvent(
+            AtlasReviewRepository.EventSummary event,
+            String entrySource
+    ) {
         Intent intent = new Intent(this, EventDetailActivity.class);
         intent.putExtra("event_id", event.eventId);
         intent.putExtra("session_id", event.sessionId);
+        ResearchNavigation.withSource(intent, entrySource);
         startActivity(intent);
     }
 
@@ -378,6 +522,25 @@ public class ReviewShellActivity extends AppCompatActivity {
                 @Override
                 public void onClick(View v) {
                     selectedDayStartMs = dayStartMs;
+                    Calendar todayStart =
+                            startOfDay(Calendar.getInstance());
+                    long daysFromToday = Math.round(
+                            (dayStartMs
+                                    - todayStart.getTimeInMillis())
+                                    / (24d * 60d * 60d * 1000d));
+                    ResearchInteractionLogger.log(
+                            ReviewShellActivity.this,
+                            ResearchEventNames.REVIEW_CALENDAR_DAY_SELECTED,
+                            null,
+                            null,
+                            null,
+                            ResearchInteractionLogger.properties(
+                                    "days_from_today",
+                                    daysFromToday,
+                                    "event_count",
+                                    dayEvents == null
+                                            ? 0
+                                            : dayEvents.size()));
                     renderCalendar();
                 }
             });
@@ -421,7 +584,10 @@ public class ReviewShellActivity extends AppCompatActivity {
             card.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    openEvent(eventId, sessionId);
+                    openEvent(
+                            eventId,
+                            sessionId,
+                            "calendar_card");
                 }
             });
             calendarDayEventsContainer.addView(card);
@@ -511,7 +677,10 @@ public class ReviewShellActivity extends AppCompatActivity {
             row.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    openEvent(eventId, sessionId);
+                    openEvent(
+                            eventId,
+                            sessionId,
+                            "timeline_card");
                 }
             });
             coverEditButton.setOnClickListener(new View.OnClickListener() {
@@ -587,17 +756,25 @@ public class ReviewShellActivity extends AppCompatActivity {
             card.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    openEvent(eventId, sessionId);
+                    openEvent(
+                            eventId,
+                            sessionId,
+                            "review_card");
                 }
             });
             container.addView(card);
         }
     }
 
-    private void openEvent(String eventId, String sessionId) {
+    private void openEvent(
+            String eventId,
+            String sessionId,
+            String entrySource
+    ) {
         Intent intent = new Intent(this, EventDetailActivity.class);
         intent.putExtra("event_id", eventId);
         intent.putExtra("session_id", sessionId);
+        ResearchNavigation.withSource(intent, entrySource);
         startActivity(intent);
     }
 

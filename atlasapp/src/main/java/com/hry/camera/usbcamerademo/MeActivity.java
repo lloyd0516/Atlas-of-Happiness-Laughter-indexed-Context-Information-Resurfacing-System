@@ -98,6 +98,17 @@ public class MeActivity extends AppCompatActivity {
                 if (bindingReminderSwitches) {
                     return;
                 }
+                ResearchInteractionLogger.log(
+                        MeActivity.this,
+                        ResearchEventNames.SETTING_CHANGED,
+                        null,
+                        null,
+                        null,
+                        ResearchInteractionLogger.properties(
+                                "setting_name",
+                                "daily_reminder",
+                                "enabled", isChecked,
+                                "change_source", "user"));
                 reminderPreferences.setDailyEnabled(isChecked);
                 if (isChecked) {
                     requestNotificationPermissionIfNeeded();
@@ -114,6 +125,17 @@ public class MeActivity extends AppCompatActivity {
                 if (bindingReminderSwitches) {
                     return;
                 }
+                ResearchInteractionLogger.log(
+                        MeActivity.this,
+                        ResearchEventNames.SETTING_CHANGED,
+                        null,
+                        null,
+                        null,
+                        ResearchInteractionLogger.properties(
+                                "setting_name",
+                                "location_reminder",
+                                "enabled", isChecked,
+                                "change_source", "user"));
                 reminderPreferences.setLocationEnabled(isChecked);
                 if (isChecked) {
                     requestLocationPermissionIfNeeded();

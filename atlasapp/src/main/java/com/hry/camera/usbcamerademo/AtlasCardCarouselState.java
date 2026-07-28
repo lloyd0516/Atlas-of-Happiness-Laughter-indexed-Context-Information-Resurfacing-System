@@ -59,18 +59,22 @@ final class AtlasCardCarouselState {
         return (currentIndex + 1) % itemCount;
     }
 
-    void movePrevious() {
+    boolean movePrevious() {
         int previous = previousIndex();
         if (previous >= 0) {
             currentIndex = previous;
+            return true;
         }
+        return false;
     }
 
-    void moveNext() {
+    boolean moveNext() {
         int next = nextIndex();
         if (next >= 0) {
             currentIndex = next;
+            return true;
         }
+        return false;
     }
 
     List<CardSlot> drawOrder() {

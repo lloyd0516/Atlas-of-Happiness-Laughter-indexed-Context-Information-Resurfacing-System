@@ -47,6 +47,18 @@ public class MapReviewActivity extends AppCompatActivity {
         });
         listContainer = findViewById(R.id.listContainer);
         emptyView = findViewById(R.id.emptyView);
+        ResearchInteractionLogger.log(
+                this,
+                ResearchEventNames.MAP_OPENED,
+                null,
+                null,
+                null,
+                ResearchInteractionLogger.properties(
+                        "entry_source",
+                        ResearchNavigation.source(
+                                getIntent(), "legacy_map"),
+                        "legacy", true,
+                        "focused_from_notification", false));
         findViewById(R.id.btnBack).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -56,6 +68,15 @@ public class MapReviewActivity extends AppCompatActivity {
         findViewById(R.id.btnRefresh).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                ResearchInteractionLogger.log(
+                        MapReviewActivity.this,
+                        ResearchEventNames.MAP_RECENTER_REQUESTED,
+                        null,
+                        null,
+                        null,
+                        ResearchInteractionLogger.properties(
+                                "method", "refresh_button",
+                                "legacy", true));
                 render();
             }
         });
@@ -92,7 +113,11 @@ public class MapReviewActivity extends AppCompatActivity {
     private void renderList(List<AtlasReviewRepository.EventSummary> events) {
         listContainer.removeAllViews();
         LayoutInflater inflater = LayoutInflater.from(this);
-        for (final AtlasReviewRepository.EventSummary event : events) {
+        final int cardTotal = events.size();
+        for (int i = 0; i < events.size(); i++) {
+            final int cardIndex = i;
+            final AtlasReviewRepository.EventSummary event =
+                    events.get(i);
             View card = inflater.inflate(R.layout.item_event_card, listContainer, false);
             ((TextView) card.findViewById(R.id.txtEventTime)).setText(event.timeRangeText);
             ((TextView) card.findViewById(R.id.txtEventBody)).setText(!TextUtils.isEmpty(event.locationName) ? event.locationName : event.eventId);
@@ -104,12 +129,33 @@ public class MapReviewActivity extends AppCompatActivity {
             card.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    openEvent(event.eventId);
+                    ResearchInteractionLogger.log(
+                            MapReviewActivity.this,
+                            ResearchEventNames.MAP_MOMENT_OPENED,
+                            event.sessionId,
+                            event.eventId,
+                            null,
+                            ResearchInteractionLogger.properties(
+                                    "card_index", cardIndex,
+                                    "total", cardTotal,
+                                    "map_variant", "legacy"));
+                    openEvent(event);
                 }
             });
             card.setOnLongClickListener(new View.OnLongClickListener() {
                 @Override
                 public boolean onLongClick(View v) {
+                    ResearchInteractionLogger.log(
+                            MapReviewActivity.this,
+                            ResearchEventNames.MAP_RECENTER_REQUESTED,
+                            event.sessionId,
+                            event.eventId,
+                            null,
+                            ResearchInteractionLogger.properties(
+                                    "method",
+                                    "card_long_press",
+                                    "legacy", true,
+                                    "card_index", cardIndex));
                     loadDynamicMap(java.util.Collections.singletonList(event));
                     return true;
                 }
@@ -138,15 +184,14 @@ public class MapReviewActivity extends AppCompatActivity {
         return text;
     }
 
-    private void openEvent(String eventId) {
+    private void openEvent(
+            AtlasReviewRepository.EventSummary event
+    ) {
         Intent intent = new Intent(this, EventDetailActivity.class);
-        intent.putExtra("event_id", eventId);
-        for (AtlasReviewRepository.EventSummary event : currentLocatedEvents) {
-            if (eventId.equals(event.eventId)) {
-                intent.putExtra("session_id", event.sessionId);
-                break;
-            }
-        }
+        intent.putExtra("event_id", event.eventId);
+        intent.putExtra("session_id", event.sessionId);
+        ResearchNavigation.withSource(
+                intent, "legacy_map_card");
         startActivity(intent);
     }
 }
