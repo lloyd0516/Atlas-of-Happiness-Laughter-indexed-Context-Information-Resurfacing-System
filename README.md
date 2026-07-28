@@ -10,7 +10,8 @@ Atlas of Happiness 2.0 是一个 Android 研究原型：在用户主动开始的
 授权后通过短期、长期和同地点提醒帮助 moment resurfacing。
 
 > [!IMPORTANT]
-> 当前开发版本位于 `user-study-prototype`。`master` 分支下的 1.1 不是最新版。
+> 当前合作开发版本位于 `fj_ver`，基于 `user-study-prototype` 下的 2.0 架构继续开发。
+> `master` 分支下的 1.1 不是最新版。
 
 本 README 面向合作开发者，重点说明当前 App 的功能、页面、输入输出、数据结构和代码
 入口。“推送”或 resurfacing 在本项目中指 Android 本地通知，不是服务器远程推送。
@@ -26,6 +27,8 @@ system**。地图只是用户回顾历史 moment 的一种入口。
 - 每个 laughter moment 都可以补充文字、语音、照片和社交情境。
 - 用户决定删除、保留并允许回顾建议（`save_push`），或保留但不参与通知
   （`save_no_push`）。
+- 回顾详情页只在 App 播放时增强过小的 laughter audio；原始研究 WAV 永不改写。
+- 每个 laughter clip 只展示采集时间在其前后 90 秒内、时间最近的一张照片和一个视频。
 - 数据以本机 JSON 与媒体文件为 source of truth；当前没有账户、云同步或跨设备恢复。
 
 ## 核心用户流程
@@ -34,7 +37,7 @@ system**。地图只是用户回顾历史 moment 的一种入口。
 2. `JoyfulMomentRealtimeEngine` 采集 16 kHz、单声道 PCM，并通过 Speechmatics
    WebSocket 接收 laughter events。
 3. 符合阈值的检测由 `JoyfulMomentClusterer` 聚合成 moment；系统自动保留相关音频窗口，
-   并按限频策略采集照片、视频。
+   并按限频策略采集照片、视频，同时记录媒体的实际采集时间。
 4. `AtlasContextResolver` 获取 GPS，并通过 AMap 完成坐标转换、逆地理编码和天气补充。
 5. 用户手动结束记录后，从本次 session 中选择 moment，回答“和谁”“在做什么”
    “当时的心情”三个可跳过问题。
@@ -42,7 +45,8 @@ system**。地图只是用户回顾历史 moment 的一种入口。
    - **删除**：永久删除事件 JSON 与 App 管理的关联媒体；
    - **保存，并允许推送回顾建议**：写入 `save_push`；
    - **保存，但不推送回顾建议**：写入 `save_no_push`。
-7. 已保存 moment 可在地图、日历和时间线中查看，并可继续编辑或删除。
+7. 已保存 moment 可在地图、日历和时间线中查看，并可继续编辑或删除；详情页按 clip
+   时间关联附近媒体，过小的 laughter audio 会生成仅供播放的增强缓存。
 8. 只有 `save_push` moment 能进入 Short、Long 和 Location resurfacing。
 
 ## 主要页面与功能
@@ -55,7 +59,7 @@ system**。地图只是用户回顾历史 moment 的一种入口。
 | 记录后选择 | `SupplementPickerActivity` | 列出刚结束 session 中捕捉到的 laughter events |
 | 主观补充 | `EventSupplementActivity` | 三个可选情境问题，以及 delete / `save_push` / `save_no_push` 决策 |
 | 回顾 | `ReviewShellActivity` | Map、Calendar、Timeline 三种浏览方式；接收地点通知的地图聚焦参数 |
-| Moment 详情 | `EventDetailActivity` | Short/Long 两种 reconstruction 布局，查看媒体与情境，添加/修改/删除补充内容，永久删除事件 |
+| Moment 详情 | `EventDetailActivity` | Short/Long reconstruction；播放增强后的过小笑声；按 clip 时间查看附近媒体；编辑补充内容；永久删除事件 |
 | 我的 | `MeActivity` | 系统/中文/英文切换；独立控制“每日回顾推送”和“同地点提醒”，两项默认开启 |
 | 开发者设置 | `SettingsActivity` | 检测等级、Speechmatics、采集、情境 API 和摄像头参数 |
 | 日志 | `LogViewerActivity` | 查看 session、Speechmatics、检测和 App 诊断日志 |
@@ -92,6 +96,9 @@ flowchart TD
 - **读取与编辑**：`AtlasReviewRepository` 统一归一化新旧事件格式，并负责事件及媒体删除。
 - **回顾与提醒**：`ReviewShellActivity`、`EventDetailActivity`、
   `AtlasResurfacingManager` 及 Daily/Location scheduler、receiver、policy classes。
+- **播放与媒体关联**：`AtlasLaughterPlaybackPreparer` 生成 App cache 播放副本；
+  `AtlasMediaCaptureTimeResolver` 兼容新旧媒体时间；`AtlasClipMediaMatcher` 完成
+  clip 与照片、视频的窗口匹配。
 
 ## 输入、处理与输出
 
@@ -99,10 +106,10 @@ flowchart TD
 | --- | --- | --- | --- |
 | 实时检测 | 16 kHz 单声道 PCM、Speechmatics Key 与网络 | WebSocket 流式识别；按置信度、时长阈值接收 laughter event | `speechmatics_raw.jsonl`、检测记录 |
 | Moment 聚合 | laughter detection、相邻 audio clips | 按 event gap 聚合；保存 laughter 与可能相关语音窗口 | event JSON、WAV clips |
-| 自动媒体 | USB 视频流、触发策略 | 按 clip bucket 限频拍照和录制视频 | `captured_media/<event_id>/...` |
+| 自动媒体 | USB 视频流、触发策略 | 按 clip bucket 限频拍照和录制视频，记录实际触发/录制开始时间 | `captured_media/<event_id>/...`、`capture_time_ms` |
 | 自动情境 | GPS fix、AMap Key | GPS/WGS84 到 AMap 坐标、逆地理编码、天气查询；失败时重试或邻近事件回填 | `derived_context.gps`、`derived_context.weather` |
 | 用户补充 | 文字、语音、照片、社交情境、保存决策 | 写入或编辑 `user_generated` 与 `save_decision` | JSON 更新、`user_generated/<event_id>/...` |
-| 回顾 | 本地 JSON 与媒体 | 归一化、筛选、按地图/日历/时间线组织 | 页面卡片、Short/Long 详情 |
+| 回顾 | 本地 JSON 与媒体 | 归一化、筛选；按 clip 的 ±90 s 窗口关联媒体；为过小 laughter audio 准备播放缓存 | 页面卡片、Short/Long 详情、App cache 音频副本 |
 | Resurfacing | `save_push` moments、时间、GPS、偏好和权限 | Daily 候选排序或 Location proximity policy | Android 本地通知与页面跳转 |
 
 ## Moment 数据结构
@@ -117,9 +124,25 @@ flowchart TD
   "end_time_ms": 0,
   "period_ids": [],
   "auto_captured": {
-    "audio_clips": [],
-    "photos": [],
-    "videos": []
+    "audio_clips": [
+      {
+        "type": "laughter",
+        "path": "...",
+        "device_time_ms": 0
+      }
+    ],
+    "photos": [
+      {
+        "photo_path": "...",
+        "capture_time_ms": 0
+      }
+    ],
+    "videos": [
+      {
+        "video_path": "...",
+        "capture_time_ms": 0
+      }
+    ]
   },
   "derived_context": {
     "gps": {},
@@ -148,6 +171,54 @@ flowchart TD
 | `save_push` | 是 | 是 |
 | `save_no_push` | 是 | 否 |
 | 删除 | 否 | 否；不会留下可回顾的 `delete` 记录，事件及 App 管理的媒体会被物理删除 |
+
+## 笑声播放增强与媒体关联
+
+### App 内笑声音量增强
+
+增强只作用于 `laughter_audio` 的 App 播放过程，不作用于录制输入、用户语音补充或导出
+数据，也不会覆盖原始 WAV：
+
+1. 后台解析 PCM 16-bit little-endian WAV；
+2. 使用 `20 ms` 帧中响度最高 `5%` 的平均 RMS 判断笑声主体，减少前后静音的影响；
+3. 有效响度达到 `-24 dBFS` 时保持 `0 dB`，更小时补偿到阈值差值的 `75%`；
+4. 增益始终不小于 `0 dB`，最大 `+18 dB`，因此不会主动调低任何 clip；
+5. 超过约 `-1 dBFS` 的峰值进入连续软保护，降低削波和爆音风险；
+6. 增强副本写入 App cache；解析或缓存失败时直接播放原 WAV。
+
+该曲线会缩小过大的响度差距，但仍保持原始强弱次序，不会把所有笑声归一化成相同
+音量。波形继续读取原始 WAV，以保留真实声音形状。研究交互日志的播放事件会记录
+`gain_db` 和 `gain_algorithm_version`，但不记录音频内容。
+
+核心参数位于
+[`AppConfig.java`](atlasapp/src/main/java/com/hry/camera/usbcamerademo/AppConfig.java)，
+实现位于
+[`AtlasLaughterGainPolicy.java`](atlasapp/src/main/java/com/hry/camera/usbcamerademo/AtlasLaughterGainPolicy.java)
+和
+[`AtlasLaughterPlaybackPreparer.java`](atlasapp/src/main/java/com/hry/camera/usbcamerademo/AtlasLaughterPlaybackPreparer.java)。
+
+### Laughter clip 与照片、视频关联
+
+详情页以每个 laughter clip 的 `device_time_ms` 为中心，照片和视频分别在
+`[T - 90 s, T + 90 s]` 中选择绝对时间差最近的一项：
+
+- 每个 clip 最多显示一张照片和一个视频；
+- 恰好相差 90 秒仍可关联，超过 90 秒则排除；
+- 同一照片或视频允许被多个相邻 clip 共用；
+- 路径失效或时间未知的媒体不参与匹配；
+- 两类媒体都不存在时隐藏整个媒体折叠项，不使用 event 中较远的媒体补位；
+- Short 和 Long 详情使用同一匹配规则。
+
+新采集数据保存明确的 `capture_time_ms`。读取旧 event 时，时间恢复优先使用已有字段，
+其次识别 `event_photo_<毫秒>` / `event_video_<毫秒>` 文件名，最后只接受落在 event
+前后合理范围内的文件修改时间；无法可信恢复时保持未知，不伪造为 event 开始时间。
+
+### “笑声涟漪”图标
+
+launcher、圆形 launcher、应用内笑脸、底部笑声导航和通知栏小图标已统一为对称笑脸与
+双层扩散弧线。中心笑脸表示 laughter-indexed positive moment，弧线同时表达声音传播
+与过去回忆再次浮现。Android 8.0 及以上使用 adaptive icon，旧版本使用五档密度 PNG；
+通知使用符合 Android 状态栏规则的单色图标。
 
 ## Resurfacing 机制
 
@@ -202,6 +273,9 @@ Location reminder 先将符合条件的历史 GPS 点聚合为稳定地点，再
 | [`MainActivity.java`](atlasapp/src/main/java/com/hry/camera/usbcamerademo/MainActivity.java) | 主页面、USB 采集宿主和 session 生命周期 |
 | [`JoyfulMomentController.java`](atlasapp/src/main/java/com/hry/camera/usbcamerademo/JoyfulMomentController.java) | 检测、聚合、自动媒体、情境解析的协调器 |
 | [`AtlasReviewRepository.java`](atlasapp/src/main/java/com/hry/camera/usbcamerademo/AtlasReviewRepository.java) | 事件读取、格式归一化、编辑、删除 |
+| [`AtlasLaughterPlaybackPreparer.java`](atlasapp/src/main/java/com/hry/camera/usbcamerademo/AtlasLaughterPlaybackPreparer.java) | PCM16 WAV 响度分析、正增益和 App cache 播放副本 |
+| [`AtlasClipMediaMatcher.java`](atlasapp/src/main/java/com/hry/camera/usbcamerademo/AtlasClipMediaMatcher.java) | 每个 clip 的 ±90 秒最近照片/视频选择 |
+| [`AtlasMediaCaptureTimeResolver.java`](atlasapp/src/main/java/com/hry/camera/usbcamerademo/AtlasMediaCaptureTimeResolver.java) | 新旧媒体可信采集时间解析 |
 | [`AtlasResurfacingManager.java`](atlasapp/src/main/java/com/hry/camera/usbcamerademo/AtlasResurfacingManager.java) | Daily 与 Location reminder 的统一 reconcile 入口 |
 | [`AtlasResurfacingSelector.java`](atlasapp/src/main/java/com/hry/camera/usbcamerademo/AtlasResurfacingSelector.java) | `save_push` 资格与两段式候选排序 |
 | [`AtlasNotificationHelper.java`](atlasapp/src/main/java/com/hry/camera/usbcamerademo/AtlasNotificationHelper.java) | 通知 channel、风格、文案和 deep link |
@@ -337,35 +411,35 @@ Android Studio 中选择 `atlasapp` configuration 和真机后即可运行。没
 
 ## 获取与安装 APK
 
-当前为合作测试生成的 APK 路径：
+本轮 `fj_ver` 合作测试 APK 的本地路径：
 
-[`artifacts/Atlas-of-Happiness-2.0-user-study-prototype-debug.apk`](artifacts/Atlas-of-Happiness-2.0-user-study-prototype-debug.apk?raw=1)
+[`artifacts/Atlas-of-Happiness-2.0-laughter-ripples-fj_ver-debug.apk`](artifacts/Atlas-of-Happiness-2.0-laughter-ripples-fj_ver-debug.apk)
 
 | 项目 | 值 |
 | --- | --- |
 | Build type | Debug 研究/测试包，不是正式 Release |
 | Package | `com.hry.camera.atlasofhappiness` |
 | 文件大小 | 约 4.4 MB |
-| SHA-256 | `bd7d17a44976a024b40516f54dca85f84df76a631d40141cb1508a99ebe7b8e9` |
+| Source branch / commit | `fj_ver` / `3e45191` |
+| SHA-256 | `058ba500c216e9c277b645d6eabe9a7608b66d676f62349c97263874d6b8e411` |
 
 > [!NOTE]
-> 该 APK 当前是本地生成产物，未纳入源码 commit。只有维护者后续将它上传到 GitHub
-> 仓库或 Release 后，上面的 GitHub 下载链接才对远程协作者可用。远端暂未提供时，
-> 请 clone 本分支并按“构建与运行”自行生成。
+> 该 APK 当前位于维护者工作区的未跟踪 `artifacts/` 目录，没有随源码 push 到
+> GitHub。因此远程协作者不能直接从仓库下载这个文件；请向维护者获取 APK，或 clone
+> `fj_ver` 后按“构建与运行”自行生成。若需要稳定公开下载，应另行上传到 GitHub Release。
 
-从 GitHub 下载并在手机安装：
+获得 APK 后在手机安装：
 
-1. 打开 `artifacts/`，选择上述 `.apk` 文件；
-2. 点击 **Download raw file** 下载；
-3. 在 Android 提示时，允许当前浏览器或文件管理器“安装未知应用”；
-4. 打开 APK 完成安装，再启动 Atlas；
-5. 按提示授予相机、麦克风、定位和通知权限；同地点提醒还需要后台定位权限。
+1. 将上述 `.apk` 文件传到手机；
+2. 在 Android 提示时，允许当前浏览器或文件管理器“安装未知应用”；
+3. 打开 APK 完成安装，再启动 Atlas；
+4. 按提示授予相机、麦克风、定位和通知权限；同地点提醒还需要后台定位权限。
 
 也可以连接开启 USB debugging 的 Android 设备后，通过 ADB 安装或覆盖同签名版本：
 
 ```sh
 adb devices
-adb install -r artifacts/Atlas-of-Happiness-2.0-user-study-prototype-debug.apk
+adb install -r artifacts/Atlas-of-Happiness-2.0-laughter-ripples-fj_ver-debug.apk
 ```
 
 如果设备上已有不同签名、但 package 相同的版本，Android 会拒绝覆盖。卸载旧版本会清除
@@ -398,6 +472,10 @@ sh gradlew :atlasapp:testDebugUnitTest
 
 当前专项测试覆盖：
 
+- `AtlasLaughterGainPolicyTest`：只增不减、最大增益和输出响度顺序；
+- `AtlasLaughterPlaybackPreparerTest`：PCM16 WAV 分析、缓存、原文件不变、峰值保护与安全回退；
+- `AtlasClipMediaMatcherTest`：±90 秒边界、最近媒体、平局、复用和无候选行为；
+- `AtlasMediaCaptureTimeResolverTest` / `JoyfulMomentMediaAssetTest`：新媒体时间持久化与旧时间恢复；
 - `AtlasResurfacingSelectorTest`：`save_push` 资格、补充优先、媒体数量与确定性排序；
 - `AtlasReminderScheduleTest`：19:30 调度、跨日和 DST 日历窗口、catch-up；
 - `AtlasLocationReminderPolicyTest`：6 h 最小年龄与 2 h cooldown；
@@ -405,6 +483,9 @@ sh gradlew :atlasapp:testDebugUnitTest
 - `AtlasEventDeletionPathsTest`：App 管理媒体删除范围与目录越界防护。
 - `ResearchJsonlWriterTest` / `ResearchLogRecordTest`：研究日志落盘、重试与 schema envelope；
 - `ResearchSessionTimingTest` / `ResearchPlaybackTrackerTest`：session 与实际媒体播放时长。
+
+当前 `fj_ver` 的完整 debug JVM 测试共 `77` 项；最近一次完整运行与
+`:atlasapp:assembleDebug --rerun-tasks` 均通过。
 
 单元测试不能替代真机验收。涉及 USB、系统闹钟、通知权限、后台 GPS、地图 deep link
 和进程重启的行为，必须在 Android 真机上验证。
@@ -435,6 +516,17 @@ GPS 或 AMap Key 缺失、网络失败、定位精度不足时，情境可能为
 也可能从 6 h 邻近窗口内已有情境的事件回填。当前天气主链路来自 AMap，不是
 OpenWeather。
 
+### 为什么某段笑声还是比较小？
+
+App 只对低于 `-24 dBFS` 的 laughter clip 做部分正增益，最大为 `+18 dB`。它的目标是
+让极小声音更容易听见，同时保留“自己较大、环境较小”等原始相对特征，而不是把所有
+片段拉到同一音量。非 PCM16、损坏或无法建立缓存的 WAV 会安全回退到原文件。
+
+### 为什么某个笑声片段下面没有照片或视频？
+
+每类媒体必须位于该 clip 前后 90 秒内，且文件当前可访问。窗口内没有合格照片或视频时，
+对应媒体不会显示，也不会拿时间上很远的 event 媒体替代。
+
 ### 当前产品限制
 
 - 这是 user-study prototype，不是 production app；
@@ -442,6 +534,7 @@ OpenWeather。
 - laughter detection 依赖第三方实时服务和网络；
 - 完整采集依赖指定 USB 摄像头/音频路由，不能只靠 emulator 验证；
 - Debug APK 使用开发调试签名，不应作为应用商店发布包；
+- 播放增强当前仅支持采集链路产生的 PCM 16-bit little-endian WAV；
 - 删除 event 是不可撤销的物理删除。
 
 ## 数据与隐私
@@ -462,8 +555,8 @@ OpenWeather。
 
 ## 协作约定
 
-- 新功能和修复以 `user-study-prototype` 的 2.0 架构为准，不从 `master` 的 1.1
-  反向覆盖。
+- 新功能和修复以 `user-study-prototype` 的 2.0 架构为基础，并在 `fj_ver` 上协作；
+  不从 `master` 的 1.1 反向覆盖。
 - 修改数据格式时，必须同步考虑 `AtlasReviewRepository` 的旧格式归一化与已有研究数据。
 - 检测、调度、半径、cooldown 等参数统一放入 `AppConfig` 或对应配置类。
 - Notification 行为需要保持 idempotent；只有 `post...()` 成功后才能持久化“已发送”状态。
