@@ -258,4 +258,8 @@
     <string name="event_delete_confirm">确定删除这个事件及其 App 内关联媒体吗？删除后无法恢复。</string>
     <string name="event_delete_success">事件已删除。</string>
     <string name="event_delete_failed">事件删除失败。</string>
+    <string name="audio_playback_play">播放音频</string>
+    <string name="audio_playback_pause">暂停音频</string>
+    <string name="audio_playback_unavailable">音频文件不可用</string>
+    <string name="audio_playback_failed">音频播放失败</string>
 </resources>

@@ -257,4 +257,8 @@
     <string name="event_delete_confirm">Delete this moment and all of its app-owned media? This cannot be undone.</string>
     <string name="event_delete_success">Moment deleted.</string>
     <string name="event_delete_failed">This moment could not be deleted.</string>
+    <string name="audio_playback_play">Play audio</string>
+    <string name="audio_playback_pause">Pause audio</string>
+    <string name="audio_playback_unavailable">Audio file is unavailable.</string>
+    <string name="audio_playback_failed">Audio could not be played.</string>
 </resources>

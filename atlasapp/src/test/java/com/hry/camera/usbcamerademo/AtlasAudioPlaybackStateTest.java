@@ -63,6 +63,19 @@ public class AtlasAudioPlaybackStateTest {
         assertNull(failed.path);
     }
 
+    @Test
+    public void playbackProgressClampsToUnitInterval() {
+        assertEquals(0f, AtlasAudioPlaybackState.progress(10L, 0L), 0.001f);
+        assertEquals(0.5f, AtlasAudioPlaybackState.progress(500L, 1000L), 0.001f);
+        assertEquals(1f, AtlasAudioPlaybackState.progress(2000L, 1000L), 0.001f);
+    }
+
+    @Test
+    public void elapsedTimeUsesMinuteSecondFormat() {
+        assertEquals("00:00", AtlasAudioPlaybackState.formatTime(0L));
+        assertEquals("01:05", AtlasAudioPlaybackState.formatTime(65000L));
+    }
+
     private static AtlasAudioPlaybackState.State idle() {
         return new AtlasAudioPlaybackState.State(null, IDLE);
     }

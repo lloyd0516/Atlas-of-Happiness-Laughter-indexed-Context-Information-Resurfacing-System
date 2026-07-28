@@ -1,5 +1,7 @@
 package com.hry.camera.usbcamerademo;
 
+import java.util.Locale;
+
 final class AtlasAudioPlaybackState {
     enum Status {
         IDLE,
@@ -58,6 +60,22 @@ final class AtlasAudioPlaybackState {
             default:
                 return new State(null, Status.IDLE);
         }
+    }
+
+    static float progress(long positionMs, long durationMs) {
+        if (durationMs <= 0L) {
+            return 0f;
+        }
+        return Math.max(0f, Math.min(1f, positionMs / (float) durationMs));
+    }
+
+    static String formatTime(long positionMs) {
+        long totalSeconds = Math.max(0L, positionMs) / 1000L;
+        return String.format(
+                Locale.US,
+                "%02d:%02d",
+                totalSeconds / 60L,
+                totalSeconds % 60L);
     }
 
     private static boolean hasPath(String path) {
