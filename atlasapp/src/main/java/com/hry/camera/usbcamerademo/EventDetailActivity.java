@@ -14,6 +14,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
@@ -46,6 +47,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -94,6 +96,8 @@ public class EventDetailActivity extends AppCompatActivity {
     private boolean audioPreparing;
     private String activeAudioNotePath;
     private String pendingPhotoPath;
+    private ResearchVisitTimer detailVisitTimer;
+    private String detailVisitId;
     private final SimpleDateFormat fileFormat = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US);
     private final Runnable audioProgressRunnable = new Runnable() {
         @Override
@@ -199,8 +203,49 @@ public class EventDetailActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onStart() {
+        super.onStart();
+        if (eventJson == null) {
+            return;
+        }
+        detailVisitTimer = new ResearchVisitTimer();
+        detailVisitTimer.start(SystemClock.elapsedRealtime());
+        detailVisitId = UUID.randomUUID().toString();
+        ResearchInteractionLogger.log(
+                this,
+                ResearchEventNames.MOMENT_DETAIL_OPENED,
+                sessionId,
+                eventId,
+                null,
+                ResearchInteractionLogger.properties(
+                        "visit_id", detailVisitId,
+                        "entry_source", ResearchNavigation.source(
+                                getIntent(), "unknown"),
+                        "reconstruction_mode",
+                        longTermMode ? "long" : "short"));
+    }
+
+    @Override
     protected void onStop() {
         AtlasDevLogger.i(this, TAG, "onStop");
+        if (detailVisitTimer != null) {
+            long visibleDurationMs = detailVisitTimer.pause(
+                    SystemClock.elapsedRealtime());
+            ResearchInteractionLogger.log(
+                    this,
+                    ResearchEventNames.MOMENT_DETAIL_CLOSED,
+                    sessionId,
+                    eventId,
+                    null,
+                    ResearchInteractionLogger.properties(
+                            "visit_id", detailVisitId,
+                            "visible_duration_ms",
+                            visibleDurationMs,
+                            "reconstruction_mode",
+                            longTermMode ? "long" : "short"));
+            detailVisitTimer = null;
+            detailVisitId = null;
+        }
         stopAudioPlayback();
         stopAudioRecording(false);
         super.onStop();
@@ -247,6 +292,15 @@ public class EventDetailActivity extends AppCompatActivity {
                                                 : R.string.event_delete_failed,
                                         Toast.LENGTH_SHORT).show();
                                 if (deleted) {
+                                    ResearchInteractionLogger.log(
+                                            EventDetailActivity.this,
+                                            ResearchEventNames.MOMENT_DELETED,
+                                            sessionId,
+                                            eventId,
+                                            null,
+                                            ResearchInteractionLogger.properties(
+                                                    "delete_source",
+                                                    "moment_detail"));
                                     AtlasResurfacingManager.refreshLocationsAsync(
                                             EventDetailActivity.this);
                                     finish();
@@ -409,6 +463,10 @@ public class EventDetailActivity extends AppCompatActivity {
         final EditText userSummaryInput = card.findViewById(R.id.inputClipUserSummary);
         Button addNoteButton = card.findViewById(R.id.btnClipAddNote);
         Button toggleButton = card.findViewById(R.id.btnClipToggleDetails);
+        final ResearchVisitTimer[] expandedTimer =
+                new ResearchVisitTimer[]{new ResearchVisitTimer()};
+        final String clipResearchId = ResearchIdentifiers.anonymousId(
+                "clip", clip.optString("path", null));
 
         double durationSec = clip.optDouble("duration_sec", 0.0);
         String durationLabel = formatDurationShort(durationSec);
@@ -488,6 +546,8 @@ public class EventDetailActivity extends AppCompatActivity {
                     return;
                 }
                 if (repository.addTextNote(eventJson, text, "clip_card_summary")) {
+                    logMomentEditCompleted(
+                            "text_note", "add", null);
                     userSummaryInput.setText("");
                     reloadEvent();
                     renderNotesLog(notesLogContainer);
@@ -502,6 +562,33 @@ public class EventDetailActivity extends AppCompatActivity {
                 expandedDetails.setVisibility(expanded ? View.GONE : View.VISIBLE);
                 ((Button) v).setText(expanded ? (longTermMode ? R.string.btn_view_more_details : R.string.btn_view_more_details)
                         : R.string.btn_collapse_details);
+                if (expanded) {
+                    long durationMs = expandedTimer[0].pause(
+                            SystemClock.elapsedRealtime());
+                    ResearchInteractionLogger.log(
+                            EventDetailActivity.this,
+                            ResearchEventNames.DETAIL_SECTION_COLLAPSED,
+                            sessionId,
+                            eventId,
+                            null,
+                            ResearchInteractionLogger.properties(
+                                    "section_name", "clip_details",
+                                    "clip_id", clipResearchId,
+                                    "expanded_duration_ms", durationMs));
+                } else {
+                    expandedTimer[0] = new ResearchVisitTimer();
+                    expandedTimer[0].start(
+                            SystemClock.elapsedRealtime());
+                    ResearchInteractionLogger.log(
+                            EventDetailActivity.this,
+                            ResearchEventNames.DETAIL_SECTION_EXPANDED,
+                            sessionId,
+                            eventId,
+                            null,
+                            ResearchInteractionLogger.properties(
+                                    "section_name", "clip_details",
+                                    "clip_id", clipResearchId));
+                }
             }
         });
     }
@@ -849,6 +936,10 @@ public class EventDetailActivity extends AppCompatActivity {
             saved = repository.addTextNote(eventJson, text, "clip_card_summary");
         }
         if (saved) {
+            logMomentEditCompleted(
+                    "text_note",
+                    TextUtils.isEmpty(existingId) ? "add" : "edit",
+                    existingId);
             reloadEvent();
             renderUserGenerated();
         }
@@ -1301,6 +1392,8 @@ public class EventDetailActivity extends AppCompatActivity {
                     public void onClick(android.content.DialogInterface dialog, int which) {
                         String newText = input.getText().toString().trim();
                         if (!TextUtils.isEmpty(newText) && repository.editTextNote(eventJson, itemId, newText)) {
+                            logMomentEditCompleted(
+                                    "text_note", "edit", itemId);
                             reloadEvent();
                             renderUserGenerated();
                         }
@@ -1323,6 +1416,8 @@ public class EventDetailActivity extends AppCompatActivity {
                     @Override
                     public void onClick(android.content.DialogInterface dialog, int which) {
                         if (repository.deleteTextNote(eventJson, itemId)) {
+                            logMomentEditCompleted(
+                                    "text_note", "delete", itemId);
                             reloadEvent();
                             renderUserGenerated();
                         }
@@ -1383,6 +1478,12 @@ public class EventDetailActivity extends AppCompatActivity {
                                 ? repository.deleteAudioNote(eventJson, itemId)
                                 : repository.deletePhotoNote(eventJson, itemId);
                         if (deleted) {
+                            logMomentEditCompleted(
+                                    "audio_notes".equals(arrayName)
+                                            ? "audio_note"
+                                            : "photo_note",
+                                    "delete",
+                                    itemId);
                             reloadEvent();
                             renderUserGenerated();
                         }
@@ -1398,6 +1499,7 @@ public class EventDetailActivity extends AppCompatActivity {
             return;
         }
         if (repository.addTextNote(eventJson, text, "post_edit")) {
+            logMomentEditCompleted("text_note", "add", null);
             noteInput.setText("");
             Toast.makeText(this, R.string.toast_saved, Toast.LENGTH_SHORT).show();
             reloadEvent();
@@ -1454,6 +1556,13 @@ public class EventDetailActivity extends AppCompatActivity {
         if (persist && activeAudioNotePath != null) {
             boolean saved = repository.addAudioNote(
                     eventJson, activeAudioNotePath, "post_edit");
+            if (saved) {
+                logMomentEditCompleted(
+                        "audio_note",
+                        "add",
+                        ResearchIdentifiers.anonymousId(
+                                "media", activeAudioNotePath));
+            }
             devInfo("audio note stopped: persist=" + persist
                     + ", saved=" + saved + ", path=" + activeAudioNotePath);
             reloadEvent();
@@ -1503,7 +1612,22 @@ public class EventDetailActivity extends AppCompatActivity {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        repository.updateDerivedContext(eventJson, lat, lng, amapLat, amapLng, accuracyMeters, timestampMs, locationName, adcode, weatherCondition, temperature);
+                        boolean saved = repository.updateDerivedContext(
+                                eventJson,
+                                lat,
+                                lng,
+                                amapLat,
+                                amapLng,
+                                accuracyMeters,
+                                timestampMs,
+                                locationName,
+                                adcode,
+                                weatherCondition,
+                                temperature);
+                        if (saved) {
+                            logMomentEditCompleted(
+                                    "derived_context", "refresh", null);
+                        }
                         reloadEvent();
                         repository.backfillMissingContextFromNearby(eventJson, 6L * 60L * 60L * 1000L);
                         renderContext();
@@ -1576,6 +1700,13 @@ public class EventDetailActivity extends AppCompatActivity {
     private void saveCapturedPhotoFile(File file) {
         try {
             boolean saved = repository.addPhotoNote(eventJson, file.getAbsolutePath(), "post_edit");
+            if (saved) {
+                logMomentEditCompleted(
+                        "photo_note",
+                        "add",
+                        ResearchIdentifiers.anonymousId(
+                                "media", file.getAbsolutePath()));
+            }
             devInfo("photo note saved=" + saved + ", path=" + file.getAbsolutePath() + ", size=" + file.length());
             reloadEvent();
             renderUserGenerated();
@@ -1585,6 +1716,29 @@ public class EventDetailActivity extends AppCompatActivity {
             devError("saveCapturedPhotoFile failed", e);
             Toast.makeText(this, R.string.toast_photo_capture_failed, Toast.LENGTH_LONG).show();
         }
+    }
+
+    private void logMomentEditCompleted(
+            String fieldCategory,
+            String operation,
+            String opaqueItemId
+    ) {
+        JSONObject properties = ResearchInteractionLogger.properties(
+                "field_category", fieldCategory,
+                "operation", operation);
+        if (!TextUtils.isEmpty(opaqueItemId)) {
+            try {
+                properties.put("item_id", opaqueItemId);
+            } catch (JSONException ignored) {
+            }
+        }
+        ResearchInteractionLogger.log(
+                this,
+                ResearchEventNames.MOMENT_EDIT_COMPLETED,
+                sessionId,
+                eventId,
+                null,
+                properties);
     }
 
     @Override

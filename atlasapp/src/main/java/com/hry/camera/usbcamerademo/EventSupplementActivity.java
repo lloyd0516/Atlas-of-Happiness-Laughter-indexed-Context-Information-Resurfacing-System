@@ -28,6 +28,7 @@ public class EventSupplementActivity extends AppCompatActivity {
     private String eventId;
     private String sessionId;
     private JSONObject eventJson;
+    private ResearchSupplementProgress supplementProgress;
 
     private int currentStep = STEP_WITH_WHOM;
     private String withWhom = "";
@@ -54,6 +55,17 @@ public class EventSupplementActivity extends AppCompatActivity {
             finish();
             return;
         }
+        supplementProgress = new ResearchSupplementProgress(STEP_COUNT);
+        ResearchInteractionLogger.log(
+                this,
+                ResearchEventNames.SUPPLEMENT_FLOW_OPENED,
+                sessionId,
+                eventId,
+                null,
+                ResearchInteractionLogger.properties(
+                        "entry_source",
+                        ResearchNavigation.source(
+                                getIntent(), "unknown")));
 
         txtStep = findViewById(R.id.txtSupplementStep);
         txtTitle = findViewById(R.id.txtSupplementTitle);
@@ -63,13 +75,26 @@ public class EventSupplementActivity extends AppCompatActivity {
         findViewById(R.id.btnSupplementSkip).setOnClickListener(new android.view.View.OnClickListener() {
             @Override
             public void onClick(android.view.View v) {
+                ResearchInteractionLogger.log(
+                        EventSupplementActivity.this,
+                        ResearchEventNames.SUPPLEMENT_STEP_SKIPPED,
+                        sessionId,
+                        eventId,
+                        null,
+                        ResearchInteractionLogger.properties(
+                                "step_name", stepName(currentStep)));
+                supplementProgress.record(currentStep, false);
                 advance("");
             }
         });
         btnNext.setOnClickListener(new android.view.View.OnClickListener() {
             @Override
             public void onClick(android.view.View v) {
-                advance(inputAnswer.getText().toString().trim());
+                String answer =
+                        inputAnswer.getText().toString().trim();
+                supplementProgress.record(
+                        currentStep, !TextUtils.isEmpty(answer));
+                advance(answer);
             }
         });
 
@@ -118,8 +143,35 @@ public class EventSupplementActivity extends AppCompatActivity {
             currentStep++;
             renderStep();
         } else {
-            repository.updateSocialContext(eventJson, withWhom, doingWhat, mood);
+            boolean saved = repository.updateSocialContext(
+                    eventJson, withWhom, doingWhat, mood);
+            JSONObject properties = supplementProgress.properties();
+            try {
+                properties.put("persistence_succeeded", saved);
+                properties.put("completion_reason", "questions_finished");
+            } catch (Exception ignored) {
+            }
+            ResearchInteractionLogger.log(
+                    this,
+                    ResearchEventNames.SUPPLEMENT_FLOW_COMPLETED,
+                    sessionId,
+                    eventId,
+                    null,
+                    properties);
             showSaveDecisionDialog();
+        }
+    }
+
+    private String stepName(int step) {
+        switch (step) {
+            case STEP_WITH_WHOM:
+                return "with_whom";
+            case STEP_DOING_WHAT:
+                return "doing_what";
+            case STEP_MOOD:
+                return "mood";
+            default:
+                return "unknown";
         }
     }
 
@@ -154,9 +206,28 @@ public class EventSupplementActivity extends AppCompatActivity {
                 .setPositiveButton(R.string.save_decision_delete, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
+                        ResearchInteractionLogger.log(
+                                EventSupplementActivity.this,
+                                ResearchEventNames.MOMENT_SAVE_DECISION,
+                                sessionId,
+                                eventId,
+                                null,
+                                ResearchInteractionLogger.properties(
+                                        "action", "delete",
+                                        "push_allowed", false));
                         AtlasReviewRepository.EventSummary summary = findSummary();
-                        if (summary != null) {
-                            repository.deleteEventPermanently(summary);
+                        boolean deleted = summary != null
+                                && repository.deleteEventPermanently(summary);
+                        if (deleted) {
+                            ResearchInteractionLogger.log(
+                                    EventSupplementActivity.this,
+                                    ResearchEventNames.MOMENT_DELETED,
+                                    sessionId,
+                                    eventId,
+                                    null,
+                                    ResearchInteractionLogger.properties(
+                                            "delete_source",
+                                            "post_session_decision"));
                             AtlasResurfacingManager.refreshLocationsAsync(
                                     EventSupplementActivity.this);
                         }
@@ -173,16 +244,38 @@ public class EventSupplementActivity extends AppCompatActivity {
     }
 
     private void applyDecisionAndOfferEdit(String action) {
-        repository.saveDecision(eventJson, action);
+        boolean saved = repository.saveDecision(eventJson, action);
+        if (saved) {
+            ResearchInteractionLogger.log(
+                    this,
+                    ResearchEventNames.MOMENT_SAVE_DECISION,
+                    sessionId,
+                    eventId,
+                    null,
+                    ResearchInteractionLogger.properties(
+                            "action", action,
+                            "push_allowed", "save_push".equals(action)));
+        }
         AtlasResurfacingManager.refreshLocationsAsync(this);
         new AlertDialog.Builder(this)
                 .setMessage(R.string.event_detail_notes_hint)
                 .setPositiveButton(R.string.save_decision_edit_now, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
+                        ResearchInteractionLogger.log(
+                                EventSupplementActivity.this,
+                                ResearchEventNames.MOMENT_EDIT_STARTED,
+                                sessionId,
+                                eventId,
+                                null,
+                                ResearchInteractionLogger.properties(
+                                        "entry_source",
+                                        "post_session_decision"));
                         Intent intent = new Intent(EventSupplementActivity.this, EventDetailActivity.class);
                         intent.putExtra("event_id", eventId);
                         intent.putExtra("session_id", sessionId);
+                        ResearchNavigation.withSource(
+                                intent, "post_session_decision");
                         startActivity(intent);
                         finish();
                     }

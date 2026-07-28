@@ -39,6 +39,14 @@ public class SupplementPickerActivity extends AppCompatActivity {
         findViewById(R.id.btnPickerDone).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                ResearchInteractionLogger.log(
+                        SupplementPickerActivity.this,
+                        ResearchEventNames.SUPPLEMENT_FLOW_COMPLETED,
+                        sessionId,
+                        null,
+                        null,
+                        ResearchInteractionLogger.properties(
+                                "completion_reason", "picker_done"));
                 finish();
             }
         });
@@ -65,6 +73,8 @@ public class SupplementPickerActivity extends AppCompatActivity {
                     Intent intent = new Intent(SupplementPickerActivity.this, EventSupplementActivity.class);
                     intent.putExtra("event_id", event.eventId);
                     intent.putExtra("session_id", event.sessionId);
+                    ResearchNavigation.withSource(
+                            intent, "supplement_picker");
                     startActivity(intent);
                 }
             });
