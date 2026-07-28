@@ -6,6 +6,7 @@ import android.media.MediaPlayer;
 import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.support.v4.content.FileProvider;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
@@ -17,6 +18,7 @@ import android.widget.Toast;
 import android.widget.VideoView;
 
 import java.io.File;
+import java.util.UUID;
 
 public class VideoPlayerActivity extends AppCompatActivity {
     private VideoView videoView;
@@ -24,6 +26,13 @@ public class VideoPlayerActivity extends AppCompatActivity {
     private ImageView fallbackFrameView;
     private Uri playbackUri;
     private String playbackPath;
+    private String researchSessionId;
+    private String researchMomentId;
+    private String researchMediaItemId;
+    private String playbackInstanceId;
+    private ResearchPlaybackTracker playbackTracker;
+    private boolean playbackStarted;
+    private boolean playbackCompleted;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,6 +60,20 @@ public class VideoPlayerActivity extends AppCompatActivity {
         final String uriString = getIntent().getStringExtra("video_uri");
         final String path = getIntent().getStringExtra("video_path");
         playbackPath = path;
+        researchSessionId = getIntent().getStringExtra(
+                "research_session_id");
+        researchMomentId = getIntent().getStringExtra(
+                "research_moment_id");
+        researchMediaItemId = getIntent().getStringExtra(
+                "research_media_item_id");
+        if (TextUtils.isEmpty(researchMediaItemId)) {
+            researchMediaItemId = ResearchIdentifiers.anonymousId(
+                    "media", path);
+        }
+        if (!getIntent().getBooleanExtra(
+                "research_media_open_logged", false)) {
+            logMediaOpened("in_app");
+        }
         Uri uri = null;
         final boolean hasLocalFile = !TextUtils.isEmpty(path) && new File(path).exists();
         if (!TextUtils.isEmpty(uriString)) {
@@ -65,6 +88,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
         }
         if (uri == null) {
             statusView.setText(R.string.toast_video_open_failed);
+            logPlaybackFailure("missing_source");
             return;
         }
         final Uri finalUri = uri;
@@ -85,13 +109,55 @@ public class VideoPlayerActivity extends AppCompatActivity {
                         + (TextUtils.isEmpty(meta) ? "" : "\n" + meta)
                         + "\n" + finalUri);
                 videoView.start();
+                playbackInstanceId =
+                        UUID.randomUUID().toString();
+                playbackTracker = new ResearchPlaybackTracker();
+                playbackTracker.start(
+                        SystemClock.elapsedRealtime());
+                playbackStarted = true;
+                playbackCompleted = false;
+                logPlayback(
+                        ResearchEventNames.MEDIA_PLAY_STARTED,
+                        ResearchInteractionLogger.properties(
+                                "position_ms",
+                                videoView.getCurrentPosition(),
+                                "duration_ms",
+                                videoView.getDuration(),
+                                "resumed", false));
             }
         });
+        videoView.setOnCompletionListener(
+                new MediaPlayer.OnCompletionListener() {
+                    @Override
+                    public void onCompletion(
+                            MediaPlayer completedPlayer) {
+                        if (!playbackStarted
+                                || playbackCompleted) {
+                            return;
+                        }
+                        long playedDurationMs =
+                                playbackTracker == null
+                                        ? 0L
+                                        : playbackTracker.finish(
+                                                SystemClock.elapsedRealtime());
+                        playbackCompleted = true;
+                        logPlayback(
+                                ResearchEventNames.MEDIA_PLAY_COMPLETED,
+                                ResearchInteractionLogger.properties(
+                                        "position_ms",
+                                        videoView.getDuration(),
+                                        "duration_ms",
+                                        videoView.getDuration(),
+                                        "played_duration_ms",
+                                        playedDurationMs));
+                    }
+                });
         videoView.setOnErrorListener(new MediaPlayer.OnErrorListener() {
             @Override
             public boolean onError(MediaPlayer mp, int what, int extra) {
                 AtlasDevLogger.w(VideoPlayerActivity.this, "Atlas.VideoPlayer", "error what=" + what + ", extra=" + extra + ", uri=" + finalUri);
                 statusView.setText(getString(R.string.toast_video_open_failed) + "\n" + finalUri);
+                logPlaybackFailure("player_error");
                 if (!TextUtils.isEmpty(path)) {
                     tryOpenExternal(finalUri, path);
                 }
@@ -104,6 +170,87 @@ public class VideoPlayerActivity extends AppCompatActivity {
         } else {
             videoView.setVideoURI(finalUri);
         }
+    }
+
+    @Override
+    protected void onStop() {
+        if (playbackStarted && !playbackCompleted) {
+            long playedDurationMs = playbackTracker == null
+                    ? 0L
+                    : playbackTracker.pause(
+                            SystemClock.elapsedRealtime());
+            logPlayback(
+                    ResearchEventNames.MEDIA_PLAY_PAUSED,
+                    ResearchInteractionLogger.properties(
+                            "position_ms",
+                            Math.max(
+                                    0,
+                                    videoView.getCurrentPosition()),
+                            "played_duration_ms",
+                            playedDurationMs,
+                            "reason", "screen_hidden"));
+            videoView.pause();
+            playbackStarted = false;
+        }
+        super.onStop();
+    }
+
+    private void logPlaybackFailure(String failureType) {
+        long playedDurationMs = playbackTracker == null
+                ? 0L
+                : playbackTracker.pause(
+                        SystemClock.elapsedRealtime());
+        logPlayback(
+                ResearchEventNames.MEDIA_PLAY_FAILED,
+                ResearchInteractionLogger.properties(
+                        "position_ms",
+                        videoView == null
+                                ? 0
+                                : Math.max(
+                                        0,
+                                        videoView.getCurrentPosition()),
+                        "played_duration_ms",
+                        playedDurationMs,
+                        "failure_type", failureType));
+        playbackStarted = false;
+    }
+
+    private void logPlayback(
+            String eventName,
+            org.json.JSONObject properties
+    ) {
+        try {
+            properties.put(
+                    "media_item_id", researchMediaItemId);
+            properties.put("media_type", "video");
+            properties.put(
+                    "playback_instance_id",
+                    TextUtils.isEmpty(playbackInstanceId)
+                            ? UUID.randomUUID().toString()
+                            : playbackInstanceId);
+        } catch (org.json.JSONException ignored) {
+        }
+        ResearchInteractionLogger.log(
+                this,
+                eventName,
+                researchSessionId,
+                researchMomentId,
+                null,
+                properties);
+    }
+
+    private void logMediaOpened(String openTarget) {
+        ResearchInteractionLogger.log(
+                this,
+                ResearchEventNames.MEDIA_OPENED,
+                researchSessionId,
+                researchMomentId,
+                null,
+                ResearchInteractionLogger.properties(
+                        "media_item_id",
+                        researchMediaItemId,
+                        "media_type", "video",
+                        "open_target", openTarget));
     }
 
     private void showFallbackFrame(String path) {
@@ -158,6 +305,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
             intent.setDataAndType(uri, "video/*");
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             startActivity(intent);
+            logMediaOpened("external");
             Toast.makeText(this, R.string.toast_video_external_open, Toast.LENGTH_SHORT).show();
         } catch (Exception ignored) {
             Toast.makeText(this, getString(R.string.toast_video_open_failed) + "\n" + path, Toast.LENGTH_LONG).show();

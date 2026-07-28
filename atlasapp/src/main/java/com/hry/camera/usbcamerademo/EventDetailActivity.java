@@ -92,6 +92,9 @@ public class EventDetailActivity extends AppCompatActivity {
             new AtlasAudioPlaybackState.State(null, AtlasAudioPlaybackState.Status.IDLE);
     private AudioRowBinding activeAudioBinding;
     private String activePlaybackPath;
+    private String activePlaybackMediaType;
+    private String activePlaybackInstanceId;
+    private ResearchPlaybackTracker activePlaybackTracker;
     private boolean audioPaused;
     private boolean audioPreparing;
     private String activeAudioNotePath;
@@ -119,7 +122,7 @@ public class EventDetailActivity extends AppCompatActivity {
                     audioUiHandler.postDelayed(this, AUDIO_PROGRESS_INTERVAL_MS);
                 }
             } catch (RuntimeException error) {
-                finishAudioPlayback(AtlasAudioPlaybackState.Event.FAILED, error);
+                failAudioPlayback(error, "player_error");
                 Toast.makeText(EventDetailActivity.this,
                         R.string.audio_playback_failed, Toast.LENGTH_SHORT).show();
             }
@@ -246,7 +249,7 @@ public class EventDetailActivity extends AppCompatActivity {
             detailVisitTimer = null;
             detailVisitId = null;
         }
-        stopAudioPlayback();
+        stopAudioPlayback("screen_hidden");
         stopAudioRecording(false);
         super.onStop();
     }
@@ -505,13 +508,15 @@ public class EventDetailActivity extends AppCompatActivity {
                     laughterPlayIcon,
                     laughterWaveform,
                     laughterDuration,
-                    clip.optString("path", null));
+                    clip.optString("path", null),
+                    "laughter_audio");
             wireAudioControl(
                     contextAudioRowLong,
                     contextPlayIconLong,
                     contextWaveformLong,
                     contextAudioDurationLong,
-                    contextPath);
+                    contextPath,
+                    "context_audio");
         } else {
             photoStripShort.setVisibility(clipPhotoPaths.isEmpty() && clipVideoPaths.isEmpty() ? View.GONE : View.VISIBLE);
             populatePhotoStrip(photoStripShortContainer, clipPhotoPaths, clipVideoPaths);
@@ -527,13 +532,15 @@ public class EventDetailActivity extends AppCompatActivity {
                     laughterPlayIcon,
                     laughterWaveform,
                     laughterDuration,
-                    clip.optString("path", null));
+                    clip.optString("path", null),
+                    "laughter_audio");
             wireAudioControl(
                     contextAudioRowShort,
                     contextPlayIconShort,
                     contextWaveformShort,
                     contextAudioDurationShort,
-                    contextPath);
+                    contextPath,
+                    "context_audio");
         }
 
         socialContextText.setText(hasSocialContext ? buildSocialContextDetailText(socialContext) : getString(R.string.social_context_empty));
@@ -598,13 +605,20 @@ public class EventDetailActivity extends AppCompatActivity {
             ImageView playIcon,
             AtlasWaveformView waveform,
             TextView time,
-            String path
+            String path,
+            String mediaType
     ) {
         if (row == null || playIcon == null || waveform == null || time == null) {
             return;
         }
         final AudioRowBinding binding =
-                new AudioRowBinding(row, playIcon, waveform, time, path);
+                new AudioRowBinding(
+                        row,
+                        playIcon,
+                        waveform,
+                        time,
+                        path,
+                        mediaType);
         resetAudioBinding(binding);
         if (TextUtils.isEmpty(path)) {
             markAudioUnavailable(binding, null);
@@ -690,6 +704,10 @@ public class EventDetailActivity extends AppCompatActivity {
 
     private void handleAudioControlClick(AudioRowBinding binding) {
         if (!new File(binding.path).isFile()) {
+            logMediaPlayFailed(
+                    binding.path,
+                    binding.mediaType,
+                    "missing_file");
             markAudioUnavailable(binding,
                     new IllegalArgumentException("Audio file does not exist: " + binding.path));
             return;
@@ -705,7 +723,8 @@ public class EventDetailActivity extends AppCompatActivity {
             }
             return;
         }
-        startAudioPlayback(binding, binding.path);
+        startAudioPlayback(
+                binding, binding.path, binding.mediaType);
     }
 
     private void pauseAudioPlayback(AudioRowBinding binding) {
@@ -721,9 +740,21 @@ public class EventDetailActivity extends AppCompatActivity {
             binding.playIcon.setContentDescription(getString(R.string.audio_playback_play));
             binding.row.setContentDescription(getString(R.string.audio_playback_play));
             binding.waveform.setPlaybackActive(false);
+            long playedDurationMs = activePlaybackTracker == null
+                    ? 0L
+                    : activePlaybackTracker.pause(
+                            SystemClock.elapsedRealtime());
+            logMediaPlaybackEvent(
+                    ResearchEventNames.MEDIA_PLAY_PAUSED,
+                    binding.path,
+                    binding.mediaType,
+                    ResearchInteractionLogger.properties(
+                            "position_ms", safeAudioPosition(),
+                            "played_duration_ms", playedDurationMs,
+                            "reason", "user"));
             devInfo("audio playback paused: " + binding.path);
         } catch (RuntimeException error) {
-            finishAudioPlayback(AtlasAudioPlaybackState.Event.FAILED, error);
+            failAudioPlayback(error, "player_error");
             Toast.makeText(this, R.string.audio_playback_failed, Toast.LENGTH_SHORT).show();
         }
     }
@@ -736,11 +767,23 @@ public class EventDetailActivity extends AppCompatActivity {
                     playbackState,
                     AtlasAudioPlaybackState.Event.TOGGLE_REQUESTED,
                     binding.path);
+            if (activePlaybackTracker != null) {
+                activePlaybackTracker.start(
+                        SystemClock.elapsedRealtime());
+            }
+            logMediaPlaybackEvent(
+                    ResearchEventNames.MEDIA_PLAY_STARTED,
+                    binding.path,
+                    binding.mediaType,
+                    ResearchInteractionLogger.properties(
+                            "position_ms", safeAudioPosition(),
+                            "duration_ms", safeAudioDuration(),
+                            "resumed", true));
             renderPlaying(binding);
             scheduleAudioProgress();
             devInfo("audio playback resumed: " + binding.path);
         } catch (RuntimeException error) {
-            finishAudioPlayback(AtlasAudioPlaybackState.Event.FAILED, error);
+            failAudioPlayback(error, "player_error");
             Toast.makeText(this, R.string.audio_playback_failed, Toast.LENGTH_SHORT).show();
         }
     }
@@ -818,6 +861,9 @@ public class EventDetailActivity extends AppCompatActivity {
                 public void onClick(View v) {
                     Intent intent = new Intent(EventDetailActivity.this, FullscreenPhotoActivity.class);
                     intent.putExtra("photo_path", path);
+                    logMediaOpened(path, "photo", "fullscreen");
+                    putResearchMediaExtras(
+                            intent, path, "photo", true);
                     startActivity(intent);
                 }
             });
@@ -1052,7 +1098,15 @@ public class EventDetailActivity extends AppCompatActivity {
     }
 
     private void previewMedia(JSONObject item, String path) {
-        stopAudioPlayback();
+        previewMedia(item, path, null);
+    }
+
+    private void previewMedia(
+            JSONObject item,
+            String path,
+            String forcedMediaType
+    ) {
+        stopAudioPlayback("replaced");
         String type = item.optString("type", "");
         if (path.endsWith(".jpg") || path.endsWith(".jpeg") || path.endsWith(".png") || item.has("photo_path")) {
             Bitmap bitmap = BitmapFactory.decodeFile(path);
@@ -1060,6 +1114,7 @@ public class EventDetailActivity extends AppCompatActivity {
                 imagePreview.setVisibility(View.VISIBLE);
                 videoPreview.setVisibility(View.GONE);
                 imagePreview.setImageBitmap(bitmap);
+                logMediaOpened(path, "photo", "inline");
             } else {
                 devWarn("image preview failed to decode: " + path);
             }
@@ -1068,7 +1123,17 @@ public class EventDetailActivity extends AppCompatActivity {
         }
         if ("laughter".equals(type) || "possible_related_speech_context".equals(type) || path.endsWith(".wav") || path.endsWith(".m4a")) {
             audioStatus.setText(path);
-            playAudio(path);
+            String mediaType = forcedMediaType;
+            if (TextUtils.isEmpty(mediaType)) {
+                if ("laughter".equals(type)) {
+                    mediaType = "laughter_audio";
+                } else if ("possible_related_speech_context".equals(type)) {
+                    mediaType = "context_audio";
+                } else {
+                    mediaType = "audio";
+                }
+            }
+            playAudio(path, mediaType);
             return;
         }
         videoPreview.setVisibility(View.VISIBLE);
@@ -1079,26 +1144,20 @@ public class EventDetailActivity extends AppCompatActivity {
             audioStatus.setText(getString(R.string.toast_video_open_failed) + "\n" + path);
             return;
         }
-        devInfo("video preview launch external player: " + videoUri + " (path=" + path + ")");
-        openVideoExternal(videoUri, path);
+        devInfo("video preview launch in-app player: " + videoUri + " (path=" + path + ")");
+        openVideoPlayer(videoUri, path);
         audioStatus.setText(videoUri.toString());
     }
 
-    private void openVideoExternal(Uri uri, String path) {
-        try {
-            Intent intent = new Intent(Intent.ACTION_VIEW);
-            intent.setDataAndType(uri, "video/*");
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            startActivity(intent);
-            Toast.makeText(this, R.string.toast_video_external_open, Toast.LENGTH_SHORT).show();
-        } catch (Exception e) {
-            devWarn("external video open failed; fallback to in-app player: " + path);
-            Intent intent = new Intent(this, VideoPlayerActivity.class);
-            intent.putExtra("video_uri", uri.toString());
-            intent.putExtra("video_path", path);
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            startActivity(intent);
-        }
+    private void openVideoPlayer(Uri uri, String path) {
+        Intent intent = new Intent(
+                this, VideoPlayerActivity.class);
+        intent.putExtra("video_uri", uri.toString());
+        intent.putExtra("video_path", path);
+        putResearchMediaExtras(
+                intent, path, "video", false);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        startActivity(intent);
     }
 
     private void hideVisualPreview() {
@@ -1107,13 +1166,18 @@ public class EventDetailActivity extends AppCompatActivity {
         videoPreview.stopPlayback();
     }
 
-    private void playAudio(String path) {
-        startAudioPlayback(null, path);
+    private void playAudio(String path, String mediaType) {
+        startAudioPlayback(null, path, mediaType);
     }
 
-    private void startAudioPlayback(final AudioRowBinding binding, final String path) {
-        stopAudioPlayback();
+    private void startAudioPlayback(
+            final AudioRowBinding binding,
+            final String path,
+            final String mediaType
+    ) {
+        stopAudioPlayback("replaced");
         if (TextUtils.isEmpty(path) || !new File(path).isFile()) {
+            logMediaPlayFailed(path, mediaType, "missing_file");
             if (binding != null) {
                 markAudioUnavailable(binding,
                         new IllegalArgumentException("Audio file does not exist: " + path));
@@ -1127,6 +1191,9 @@ public class EventDetailActivity extends AppCompatActivity {
         }
         activeAudioBinding = binding;
         activePlaybackPath = path;
+        activePlaybackMediaType = mediaType;
+        activePlaybackInstanceId = null;
+        activePlaybackTracker = null;
         audioPaused = false;
         audioPreparing = true;
         playbackState = AtlasAudioPlaybackState.transition(
@@ -1152,11 +1219,28 @@ public class EventDetailActivity extends AppCompatActivity {
                             binding.row.setEnabled(true);
                         }
                         preparedPlayer.start();
+                        activePlaybackInstanceId =
+                                UUID.randomUUID().toString();
+                        activePlaybackTracker =
+                                new ResearchPlaybackTracker();
+                        activePlaybackTracker.start(
+                                SystemClock.elapsedRealtime());
+                        logMediaPlaybackEvent(
+                                ResearchEventNames.MEDIA_PLAY_STARTED,
+                                path,
+                                mediaType,
+                                ResearchInteractionLogger.properties(
+                                        "position_ms",
+                                        preparedPlayer.getCurrentPosition(),
+                                        "duration_ms",
+                                        preparedPlayer.getDuration(),
+                                        "resumed", false));
                         renderPlaying(binding);
                         scheduleAudioProgress();
                         devInfo("audio playback started: " + path);
                     } catch (RuntimeException error) {
-                        finishAudioPlayback(AtlasAudioPlaybackState.Event.FAILED, error);
+                        failAudioPlayback(
+                                error, "player_error");
                         Toast.makeText(EventDetailActivity.this,
                                 R.string.audio_playback_failed, Toast.LENGTH_SHORT).show();
                     }
@@ -1167,6 +1251,22 @@ public class EventDetailActivity extends AppCompatActivity {
                 public void onCompletion(MediaPlayer completedPlayer) {
                     if (mediaPlayer == completedPlayer) {
                         devInfo("audio playback completed: " + path);
+                        long playedDurationMs =
+                                activePlaybackTracker == null
+                                        ? 0L
+                                        : activePlaybackTracker.finish(
+                                                SystemClock.elapsedRealtime());
+                        logMediaPlaybackEvent(
+                                ResearchEventNames.MEDIA_PLAY_COMPLETED,
+                                path,
+                                mediaType,
+                                ResearchInteractionLogger.properties(
+                                        "position_ms",
+                                        completedPlayer.getDuration(),
+                                        "duration_ms",
+                                        completedPlayer.getDuration(),
+                                        "played_duration_ms",
+                                        playedDurationMs));
                         finishAudioPlayback(
                                 AtlasAudioPlaybackState.Event.COMPLETED, null);
                     }
@@ -1180,7 +1280,7 @@ public class EventDetailActivity extends AppCompatActivity {
                     }
                     RuntimeException error = new RuntimeException(
                             "MediaPlayer error what=" + what + " extra=" + extra);
-                    finishAudioPlayback(AtlasAudioPlaybackState.Event.FAILED, error);
+                    failAudioPlayback(error, "player_error");
                     Toast.makeText(EventDetailActivity.this,
                             R.string.audio_playback_failed, Toast.LENGTH_SHORT).show();
                     return true;
@@ -1188,13 +1288,146 @@ public class EventDetailActivity extends AppCompatActivity {
             });
             player.prepareAsync();
         } catch (Exception error) {
-            finishAudioPlayback(AtlasAudioPlaybackState.Event.FAILED, error);
+            failAudioPlayback(error, "prepare_error");
             Toast.makeText(this, R.string.audio_playback_failed, Toast.LENGTH_SHORT).show();
         }
     }
 
-    private void stopAudioPlayback() {
+    private void failAudioPlayback(
+            Throwable error,
+            String failureType
+    ) {
+        String path = activePlaybackPath;
+        String mediaType = activePlaybackMediaType;
+        long playedDurationMs = activePlaybackTracker == null
+                ? 0L
+                : activePlaybackTracker.pause(
+                        SystemClock.elapsedRealtime());
+        logMediaPlaybackEvent(
+                ResearchEventNames.MEDIA_PLAY_FAILED,
+                path,
+                mediaType,
+                ResearchInteractionLogger.properties(
+                        "position_ms", safeAudioPosition(),
+                        "played_duration_ms", playedDurationMs,
+                        "failure_type", failureType));
+        finishAudioPlayback(
+                AtlasAudioPlaybackState.Event.FAILED, error);
+    }
+
+    private void stopAudioPlayback(String reason) {
+        if (activePlaybackTracker != null && !audioPaused) {
+            long positionMs = safeAudioPosition();
+            long playedDurationMs = activePlaybackTracker.pause(
+                    SystemClock.elapsedRealtime());
+            logMediaPlaybackEvent(
+                    ResearchEventNames.MEDIA_PLAY_PAUSED,
+                    activePlaybackPath,
+                    activePlaybackMediaType,
+                    ResearchInteractionLogger.properties(
+                            "position_ms", positionMs,
+                            "played_duration_ms", playedDurationMs,
+                            "reason", reason));
+        }
         finishAudioPlayback(AtlasAudioPlaybackState.Event.STOPPED, null);
+    }
+
+    private int safeAudioPosition() {
+        try {
+            return mediaPlayer == null
+                    ? 0 : Math.max(0, mediaPlayer.getCurrentPosition());
+        } catch (RuntimeException ignored) {
+            return 0;
+        }
+    }
+
+    private int safeAudioDuration() {
+        try {
+            return mediaPlayer == null
+                    ? 0 : Math.max(0, mediaPlayer.getDuration());
+        } catch (RuntimeException ignored) {
+            return 0;
+        }
+    }
+
+    private void logMediaPlayFailed(
+            String path,
+            String mediaType,
+            String failureType
+    ) {
+        logMediaPlaybackEvent(
+                ResearchEventNames.MEDIA_PLAY_FAILED,
+                path,
+                mediaType,
+                ResearchInteractionLogger.properties(
+                        "position_ms", 0,
+                        "played_duration_ms", 0,
+                        "failure_type", failureType));
+    }
+
+    private void logMediaPlaybackEvent(
+            String eventName,
+            String path,
+            String mediaType,
+            JSONObject properties
+    ) {
+        try {
+            properties.put(
+                    "media_item_id",
+                    ResearchIdentifiers.anonymousId("media", path));
+            properties.put(
+                    "media_type",
+                    TextUtils.isEmpty(mediaType)
+                            ? "audio" : mediaType);
+            properties.put(
+                    "playback_instance_id",
+                    TextUtils.isEmpty(activePlaybackInstanceId)
+                            ? UUID.randomUUID().toString()
+                            : activePlaybackInstanceId);
+        } catch (JSONException ignored) {
+        }
+        ResearchInteractionLogger.log(
+                this,
+                eventName,
+                sessionId,
+                eventId,
+                null,
+                properties);
+    }
+
+    private void logMediaOpened(
+            String path,
+            String mediaType,
+            String openTarget
+    ) {
+        ResearchInteractionLogger.log(
+                this,
+                ResearchEventNames.MEDIA_OPENED,
+                sessionId,
+                eventId,
+                null,
+                ResearchInteractionLogger.properties(
+                        "media_item_id",
+                        ResearchIdentifiers.anonymousId(
+                                "media", path),
+                        "media_type", mediaType,
+                        "open_target", openTarget));
+    }
+
+    private void putResearchMediaExtras(
+            Intent intent,
+            String path,
+            String mediaType,
+            boolean openLogged
+    ) {
+        intent.putExtra("research_moment_id", eventId);
+        intent.putExtra("research_session_id", sessionId);
+        intent.putExtra(
+                "research_media_item_id",
+                ResearchIdentifiers.anonymousId("media", path));
+        intent.putExtra("research_media_type", mediaType);
+        intent.putExtra(
+                "research_media_open_logged", openLogged);
     }
 
     private void renderPlaying(AudioRowBinding binding) {
@@ -1226,6 +1459,9 @@ public class EventDetailActivity extends AppCompatActivity {
         playbackState = AtlasAudioPlaybackState.transition(playbackState, event, null);
         activeAudioBinding = null;
         activePlaybackPath = null;
+        activePlaybackMediaType = null;
+        activePlaybackInstanceId = null;
+        activePlaybackTracker = null;
         audioPaused = false;
         audioPreparing = false;
     }
@@ -1452,7 +1688,12 @@ public class EventDetailActivity extends AppCompatActivity {
             button.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    previewMedia(item, path);
+                    previewMedia(
+                            item,
+                            path,
+                            "audio_notes".equals(arrayName)
+                                    ? "user_audio"
+                                    : "photo");
                 }
             });
             if (!TextUtils.isEmpty(itemId)) {
@@ -1769,19 +2010,22 @@ public class EventDetailActivity extends AppCompatActivity {
         final AtlasWaveformView waveform;
         final TextView time;
         final String path;
+        final String mediaType;
 
         AudioRowBinding(
                 View row,
                 ImageView playIcon,
                 AtlasWaveformView waveform,
                 TextView time,
-                String path
+                String path,
+                String mediaType
         ) {
             this.row = row;
             this.playIcon = playIcon;
             this.waveform = waveform;
             this.time = time;
             this.path = path;
+            this.mediaType = mediaType;
         }
     }
 }

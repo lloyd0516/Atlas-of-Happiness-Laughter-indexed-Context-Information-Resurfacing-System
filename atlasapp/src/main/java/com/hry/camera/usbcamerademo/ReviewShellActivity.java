@@ -540,7 +540,24 @@ public class ReviewShellActivity extends AppCompatActivity {
                 .setItems(labels, new android.content.DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(android.content.DialogInterface dialog, int which) {
-                        if (repository.setCoverPhoto(event.eventJson, photoPaths.get(which))) {
+                        String selectedPath =
+                                photoPaths.get(which);
+                        if (repository.setCoverPhoto(
+                                event.eventJson, selectedPath)) {
+                            ResearchInteractionLogger.log(
+                                    ReviewShellActivity.this,
+                                    ResearchEventNames.MOMENT_EDIT_COMPLETED,
+                                    event.sessionId,
+                                    event.eventId,
+                                    null,
+                                    ResearchInteractionLogger.properties(
+                                            "field_category",
+                                            "cover_photo",
+                                            "operation", "replace",
+                                            "media_item_id",
+                                            ResearchIdentifiers.anonymousId(
+                                                    "media",
+                                                    selectedPath)));
                             allEvents = repository.loadEventSummaries();
                             renderTimeline();
                         }
