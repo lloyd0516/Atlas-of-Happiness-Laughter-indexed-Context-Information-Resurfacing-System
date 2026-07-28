@@ -127,7 +127,7 @@ public class AtlasForegroundService extends Service {
         Notification.Builder builder = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
                 ? new Notification.Builder(this, CHANNEL_ID)
                 : new Notification.Builder(this);
-        builder.setSmallIcon(R.mipmap.ic_launcher)
+        builder.setSmallIcon(R.drawable.ic_atlas_notification)
                 .setContentTitle("Atlas of Happiness")
                 .setContentText(text)
                 .setContentIntent(pendingIntent)
