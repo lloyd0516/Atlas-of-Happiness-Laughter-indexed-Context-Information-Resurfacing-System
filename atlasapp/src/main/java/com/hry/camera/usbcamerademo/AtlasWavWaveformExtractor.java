@@ -49,6 +49,7 @@ final class AtlasWavWaveformExtractor {
                         peaks[bucket],
                         Math.abs(peakSample) / 32768.0f);
             }
+            normalizeAgainstClipPeak(peaks);
             return peaks;
         } finally {
             input.close();
@@ -60,6 +61,19 @@ final class AtlasWavWaveformExtractor {
             return "";
         }
         return file.getAbsolutePath() + "|" + file.length() + "|" + file.lastModified();
+    }
+
+    private static void normalizeAgainstClipPeak(float[] peaks) {
+        float clipPeak = 0f;
+        for (float peak : peaks) {
+            clipPeak = Math.max(clipPeak, peak);
+        }
+        if (clipPeak <= 0f) {
+            return;
+        }
+        for (int i = 0; i < peaks.length; i++) {
+            peaks[i] = Math.min(1f, peaks[i] / clipPeak);
+        }
     }
 
     private static WavInfo readWavInfo(RandomAccessFile input) throws IOException {

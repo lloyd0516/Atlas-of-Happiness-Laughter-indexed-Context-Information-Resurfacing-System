@@ -40,11 +40,37 @@ public class AtlasWavWaveformExtractorTest {
                 0.0001f);
     }
 
+    @Test
+    public void quietClipIsNormalizedAgainstItsOwnPeakForVisibleShape() throws Exception {
+        File wav = writePcm16MonoWav(
+                new short[] {1000, -1000, 2000, -2000},
+                4);
+
+        float[] bars = AtlasWavWaveformExtractor.extract(wav, 2);
+
+        assertEquals(0.5f, bars[0], 0.001f);
+        assertEquals(1f, bars[1], 0.001f);
+    }
+
     @Test(expected = IOException.class)
     public void rejectsNonWaveInput() throws Exception {
         File invalid = temporaryFolder.newFile("invalid.wav");
 
         AtlasWavWaveformExtractor.extract(invalid, 16);
+    }
+
+    @Test
+    public void displayHeightKeepsQuietSamplesVisibleAndClampsPeak() {
+        assertEquals(2f, AtlasWaveformView.computeBarHeight(0f, 24f, 2f), 0.001f);
+        assertEquals(12f, AtlasWaveformView.computeBarHeight(0.5f, 24f, 2f), 0.001f);
+        assertEquals(24f, AtlasWaveformView.computeBarHeight(2f, 24f, 2f), 0.001f);
+    }
+
+    @Test
+    public void progressIsClampedToUnitInterval() {
+        assertEquals(0f, AtlasWaveformView.clampProgress(-1f), 0.001f);
+        assertEquals(0.5f, AtlasWaveformView.clampProgress(0.5f), 0.001f);
+        assertEquals(1f, AtlasWaveformView.clampProgress(2f), 0.001f);
     }
 
     private File writePcm16MonoWav(short[] samples, int sampleRate) throws IOException {

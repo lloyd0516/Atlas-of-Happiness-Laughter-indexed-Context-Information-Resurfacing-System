@@ -103,13 +103,12 @@
                 android:layout_height="34dp"
                 android:src="@drawable/ic_atlas_play_circle" />
 
-            <ImageView
+            <com.hry.camera.usbcamerademo.AtlasWaveformView
+                android:id="@+id/waveClipLaughter"
                 android:layout_width="0dp"
                 android:layout_height="24dp"
                 android:layout_marginStart="10dp"
-                android:layout_weight="1"
-                android:scaleType="fitXY"
-                android:src="@drawable/ic_atlas_waveform" />
+                android:layout_weight="1" />
 
             <TextView
                 android:id="@+id/txtClipLaughterDuration"
@@ -136,13 +135,12 @@
                 android:layout_height="34dp"
                 android:src="@drawable/ic_atlas_play_circle" />
 
-            <ImageView
+            <com.hry.camera.usbcamerademo.AtlasWaveformView
+                android:id="@+id/waveClipContextShort"
                 android:layout_width="0dp"
                 android:layout_height="24dp"
                 android:layout_marginStart="10dp"
-                android:layout_weight="1"
-                android:scaleType="fitXY"
-                android:src="@drawable/ic_atlas_waveform" />
+                android:layout_weight="1" />
 
             <TextView
                 android:id="@+id/txtClipContextAudioDurationShort"
@@ -245,13 +243,12 @@
                     android:layout_height="34dp"
                     android:src="@drawable/ic_atlas_play_circle" />
 
-                <ImageView
+                <com.hry.camera.usbcamerademo.AtlasWaveformView
+                    android:id="@+id/waveClipContextLong"
                     android:layout_width="0dp"
                     android:layout_height="24dp"
                     android:layout_marginStart="10dp"
-                    android:layout_weight="1"
-                    android:scaleType="fitXY"
-                    android:src="@drawable/ic_atlas_waveform" />
+                    android:layout_weight="1" />
 
                 <TextView
                     android:id="@+id/txtClipContextAudioDurationLong"
