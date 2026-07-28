@@ -215,6 +215,7 @@ Location reminder 先将符合条件的历史 GPS 点聚合为稳定地点，再
 ```text
 joyful_moment/
 ├── config.json
+├── research_interaction_log.jsonl
 └── session_YYYYMMDD_HHMMSS/
     ├── summary.json
     ├── <event_id>.json
@@ -228,6 +229,34 @@ joyful_moment/
 
 请通过 `JoyfulMomentEventStore` 或 `AtlasReviewRepository` 修改这些数据，不要让 UI
 自行拼接一套不一致的文件格式。
+
+### 研究交互日志
+
+`research_interaction_log.jsonl` 是供 14 天用户研究结束后分析 App 使用与交互行为的
+本地追加日志。每一行都是一个可独立解析的 JSON 对象；App 不会将该文件上传到服务器。
+它记录 session 运行时长、页面停留、补充步骤、详情展开、媒体播放、地图/回顾操作、
+设置变化和通知响应等交互元数据。
+
+该研究日志不会写入用户回答文本、“和谁 / 在做什么 / 心情”的内容、转写文本、GPS
+经纬度、地址、媒体内容或媒体文件路径。完整字段和分析口径见
+[`docs/research-log-schema-v1.md`](docs/research-log-schema-v1.md)。
+
+连接开启 USB debugging 的研究手机后，可在仓库目录执行：
+
+```sh
+adb pull \
+  /sdcard/Android/data/com.hry.camera.atlasofhappiness/files/joyful_moment/research_interaction_log.jsonl \
+  ./research_interaction_log.jsonl
+```
+
+检查导出的每一行是否均为合法 JSON：
+
+```sh
+python3 -c 'import json,sys; [json.loads(line) for line in open(sys.argv[1], encoding="utf-8") if line.strip()]; print("JSONL valid")' research_interaction_log.jsonl
+```
+
+卸载 App、清除 App 数据或部分系统清理操作可能删除该文件。用户研究结束时，应先导出
+日志和所需 moment 数据，再卸载、重置或覆盖不同签名版本。
 
 ## 环境要求
 
@@ -317,7 +346,7 @@ Android Studio 中选择 `atlasapp` configuration 和真机后即可运行。没
 | Build type | Debug 研究/测试包，不是正式 Release |
 | Package | `com.hry.camera.atlasofhappiness` |
 | 文件大小 | 约 4.4 MB |
-| SHA-256 | `2ddc78f1f44855dc024c605588a9b5e50b5cde1f4d8325ba34bd4ec44f10d9d4` |
+| SHA-256 | `052179f29e725d6dcdd3c5aaf399586ca737a5282ebee8a2f24f68ede8a2065b` |
 
 > [!NOTE]
 > 该 APK 当前是本地生成产物，未纳入源码 commit。只有维护者后续将它上传到 GitHub
@@ -374,6 +403,8 @@ sh gradlew :atlasapp:testDebugUnitTest
 - `AtlasLocationReminderPolicyTest`：6 h 最小年龄与 2 h cooldown；
 - `AtlasLocationClustererTest`：50 m 地点聚类、稳定 key、无 GPS/no-push 排除；
 - `AtlasEventDeletionPathsTest`：App 管理媒体删除范围与目录越界防护。
+- `ResearchJsonlWriterTest` / `ResearchLogRecordTest`：研究日志落盘、重试与 schema envelope；
+- `ResearchSessionTimingTest` / `ResearchPlaybackTrackerTest`：session 与实际媒体播放时长。
 
 单元测试不能替代真机验收。涉及 USB、系统闹钟、通知权限、后台 GPS、地图 deep link
 和进程重启的行为，必须在 Android 真机上验证。
@@ -423,6 +454,10 @@ OpenWeather。
 - `save_no_push` 只阻止通知资格，不等于删除数据。
 - 永久删除会同时清理事件 JSON 和 App 管理范围内的关联媒体；卸载 App 也可能清除
   App-specific storage。
+- 研究交互日志仅保存在手机本地；删除 moment 后，历史日志中的不透明 moment ID 和
+  既有交互行仍会保留，以维持研究行为时间线。
+- 导出前不要卸载或清除 App 数据；导出的 `research_interaction_log.jsonl` 仍属于研究
+  数据，应按研究协议安全保存。
 - 开发日志可能包含事件 ID、文件路径、定位状态和服务错误，分享日志前应脱敏。
 
 ## 协作约定
