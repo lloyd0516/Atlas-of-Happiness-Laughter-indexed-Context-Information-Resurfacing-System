@@ -51,6 +51,10 @@ public class ReviewShellActivity extends AppCompatActivity {
     private View mapTrailSummary;
     private TextView txtMapTrailSummary;
     private StackedCardView mapEventStack;
+    private View mapStackControls;
+    private View btnMapStackPrevious;
+    private View btnMapStackNext;
+    private TextView txtMapStackPosition;
     private List<AtlasReviewRepository.EventSummary> mapLocatedEvents = new ArrayList<>();
 
     private TextView calendarMonthLabel;
@@ -87,6 +91,28 @@ public class ReviewShellActivity extends AppCompatActivity {
         mapTrailSummary = findViewById(R.id.mapTrailSummary);
         txtMapTrailSummary = findViewById(R.id.txtMapTrailSummary);
         mapEventStack = findViewById(R.id.mapEventStack);
+        mapStackControls = findViewById(R.id.mapStackControls);
+        btnMapStackPrevious = findViewById(R.id.btnMapStackPrevious);
+        btnMapStackNext = findViewById(R.id.btnMapStackNext);
+        txtMapStackPosition = findViewById(R.id.txtMapStackPosition);
+        btnMapStackPrevious.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mapEventStack.showPrevious();
+            }
+        });
+        btnMapStackNext.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mapEventStack.showNext();
+            }
+        });
+        mapEventStack.setOnPositionChangedListener(new StackedCardView.OnPositionChangedListener() {
+            @Override
+            public void onPositionChanged(int zeroBasedPosition, int total) {
+                updateMapCarouselControls(zeroBasedPosition, total);
+            }
+        });
         setUpMapWebView();
 
         calendarMonthLabel = findViewById(R.id.txtCalendarMonth);
@@ -216,6 +242,7 @@ public class ReviewShellActivity extends AppCompatActivity {
             mapStatsPill.setVisibility(View.GONE);
             mapTrailSummary.setVisibility(View.GONE);
             mapEventStack.setVisibility(View.GONE);
+            mapStackControls.setVisibility(View.GONE);
             mapWebView.loadData("", "text/html", "UTF-8");
             return;
         }
@@ -223,6 +250,7 @@ public class ReviewShellActivity extends AppCompatActivity {
         mapStatsPill.setVisibility(View.VISIBLE);
         mapTrailSummary.setVisibility(View.VISIBLE);
         mapEventStack.setVisibility(View.VISIBLE);
+        mapStackControls.setVisibility(View.VISIBLE);
         mapWebView.loadDataWithBaseURL(
                 "https://webapi.amap.com/",
                 AtlasMapHtmlBuilder.build(located, focusedMapLat, focusedMapLng),
@@ -258,6 +286,22 @@ public class ReviewShellActivity extends AppCompatActivity {
                 openEvent(located.get(position));
             }
         });
+    }
+
+    private void updateMapCarouselControls(int zeroBasedPosition, int total) {
+        if (total <= 0 || zeroBasedPosition < 0) {
+            mapStackControls.setVisibility(View.GONE);
+            return;
+        }
+
+        mapStackControls.setVisibility(View.VISIBLE);
+        txtMapStackPosition.setText(
+                getString(R.string.map_stack_position, zeroBasedPosition + 1, total));
+        boolean canMove = total > 1;
+        btnMapStackPrevious.setEnabled(canMove);
+        btnMapStackNext.setEnabled(canMove);
+        btnMapStackPrevious.setAlpha(canMove ? 1f : 0.4f);
+        btnMapStackNext.setAlpha(canMove ? 1f : 0.4f);
     }
 
     private void openEvent(AtlasReviewRepository.EventSummary event) {

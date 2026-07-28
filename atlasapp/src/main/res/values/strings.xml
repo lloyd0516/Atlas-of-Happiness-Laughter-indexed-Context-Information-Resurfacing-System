@@ -225,6 +225,9 @@
     <string name="map_pin_laughter_count">%1$d laughs</string>
     <string name="map_trail_summary_generic">%1$d laughter moments recorded this month</string>
     <string name="map_stack_laughter_count">%1$d laughter clips</string>
+    <string name="map_stack_previous">Previous memory</string>
+    <string name="map_stack_next">Next memory</string>
+    <string name="map_stack_position">%1$d / %2$d</string>
     <string name="calendar_day_laughter_count">%1$d laughs</string>
 
     <!-- Timeline organization view redesign (materials/时间线组织视图.jpg) -->

@@ -146,8 +146,56 @@
                 <com.hry.camera.usbcamerademo.StackedCardView
                     android:id="@+id/mapEventStack"
                     android:layout_width="match_parent"
-                    android:layout_height="150dp"
+                    android:layout_height="108dp"
                     android:layout_marginTop="10dp" />
+
+                <LinearLayout
+                    android:id="@+id/mapStackControls"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:layout_marginTop="4dp"
+                    android:gravity="center"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btnMapStackPrevious"
+                        android:layout_width="44dp"
+                        android:layout_height="36dp"
+                        android:background="@drawable/atlas_map_stat_pill"
+                        android:contentDescription="@string/map_stack_previous"
+                        android:minWidth="0dp"
+                        android:minHeight="0dp"
+                        android:padding="0dp"
+                        android:text="‹"
+                        android:textColor="@color/mock_text_primary"
+                        android:textSize="22sp" />
+
+                    <TextView
+                        android:id="@+id/txtMapStackPosition"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_marginStart="12dp"
+                        android:layout_marginEnd="12dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/atlas_map_stat_pill"
+                        android:gravity="center"
+                        android:textColor="@color/mock_text_muted"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <Button
+                        android:id="@+id/btnMapStackNext"
+                        android:layout_width="44dp"
+                        android:layout_height="36dp"
+                        android:background="@drawable/atlas_map_stat_pill"
+                        android:contentDescription="@string/map_stack_next"
+                        android:minWidth="0dp"
+                        android:minHeight="0dp"
+                        android:padding="0dp"
+                        android:text="›"
+                        android:textColor="@color/mock_text_primary"
+                        android:textSize="22sp" />
+                </LinearLayout>
             </LinearLayout>
         </FrameLayout>
 
