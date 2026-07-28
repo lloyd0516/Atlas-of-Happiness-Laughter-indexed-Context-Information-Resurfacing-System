@@ -836,37 +836,26 @@ public class EventDetailActivity extends AppCompatActivity {
     }
 
     private List<String> collectNearbyPhotoPaths(JSONArray photos, long clipTimeMs) {
-        ArrayList<String> result = new ArrayList<>();
-        if (photos == null) {
-            return result;
-        }
-        for (int i = 0; i < photos.length(); i++) {
-            JSONObject photo = photos.optJSONObject(i);
-            if (photo == null) {
-                continue;
-            }
-            String path = photo.optString("photo_path", null);
-            if (!TextUtils.isEmpty(path)) {
-                result.add(path);
-            }
-        }
-        return result;
+        return singletonMediaPath(AtlasClipMediaMatcher.findNearestPath(
+                photos,
+                "photo_path",
+                clipTimeMs,
+                AppConfig.CLIP_MEDIA_MATCH_WINDOW_MS));
     }
 
     private List<String> collectNearbyVideoPaths(JSONArray videos, long clipTimeMs) {
+        return singletonMediaPath(AtlasClipMediaMatcher.findNearestPath(
+                videos,
+                "video_path",
+                clipTimeMs,
+                AppConfig.CLIP_MEDIA_MATCH_WINDOW_MS));
+    }
+
+    private List<String> singletonMediaPath(String path) {
         ArrayList<String> result = new ArrayList<>();
-        if (videos == null) {
-            return result;
-        }
-        for (int i = 0; i < videos.length(); i++) {
-            JSONObject video = videos.optJSONObject(i);
-            if (video == null) {
-                continue;
-            }
-            String path = video.optString("video_path", null);
-            if (!TextUtils.isEmpty(path)) {
-                result.add(path);
-            }
+        if (!TextUtils.isEmpty(path)
+                && AppConfig.CLIP_MEDIA_MAX_PER_TYPE > 0) {
+            result.add(path);
         }
         return result;
     }
