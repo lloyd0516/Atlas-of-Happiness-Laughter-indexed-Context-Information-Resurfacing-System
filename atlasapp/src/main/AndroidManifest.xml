@@ -59,6 +59,9 @@
             android:name=".AtlasLocationReminderReceiver"
             android:exported="false" />
         <receiver
+            android:name=".AtlasNotificationDismissReceiver"
+            android:exported="false" />
+        <receiver
             android:name=".AtlasResurfacingSystemReceiver"
             android:exported="true">
             <intent-filter>

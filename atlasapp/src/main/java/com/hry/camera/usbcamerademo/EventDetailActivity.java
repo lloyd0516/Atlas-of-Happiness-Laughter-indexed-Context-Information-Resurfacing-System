@@ -144,6 +144,8 @@ public class EventDetailActivity extends AppCompatActivity {
             finish();
             return;
         }
+        ResearchNotificationTracker.logOpened(
+                this, getIntent());
 
         headerTime = findViewById(R.id.txtHeaderTime);
         headerRecency = findViewById(R.id.txtHeaderRecency);
@@ -201,6 +203,33 @@ public class EventDetailActivity extends AppCompatActivity {
         renderEvent();
     }
 
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        String nextEventId =
+                intent.getStringExtra("event_id");
+        String nextSessionId =
+                intent.getStringExtra("session_id");
+        JSONObject nextEvent = repository.loadEventById(
+                nextSessionId, nextEventId);
+        if (nextEvent == null) {
+            return;
+        }
+        boolean restartVisibleVisit =
+                detailVisitTimer != null;
+        closeDetailVisit();
+        eventId = nextEventId;
+        sessionId = nextSessionId;
+        eventJson = nextEvent;
+        ResearchNotificationTracker.logOpened(
+                this, intent);
+        renderEvent();
+        if (restartVisibleVisit) {
+            startDetailVisit();
+        }
+    }
+
     private void reloadEvent() {
         eventJson = repository.loadEventById(sessionId, eventId);
     }
@@ -208,6 +237,10 @@ public class EventDetailActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
+        startDetailVisit();
+    }
+
+    private void startDetailVisit() {
         if (eventJson == null) {
             return;
         }
@@ -231,6 +264,13 @@ public class EventDetailActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         AtlasDevLogger.i(this, TAG, "onStop");
+        closeDetailVisit();
+        stopAudioPlayback("screen_hidden");
+        stopAudioRecording(false);
+        super.onStop();
+    }
+
+    private void closeDetailVisit() {
         if (detailVisitTimer != null) {
             long visibleDurationMs = detailVisitTimer.pause(
                     SystemClock.elapsedRealtime());
@@ -249,9 +289,6 @@ public class EventDetailActivity extends AppCompatActivity {
             detailVisitTimer = null;
             detailVisitId = null;
         }
-        stopAudioPlayback("screen_hidden");
-        stopAudioRecording(false);
-        super.onStop();
     }
 
     @Override

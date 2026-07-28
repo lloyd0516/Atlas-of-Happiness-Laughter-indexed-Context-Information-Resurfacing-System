@@ -248,6 +248,8 @@ public class ReviewShellActivity extends AppCompatActivity {
     }
 
     private void applyNavigationIntent(Intent intent) {
+        ResearchNotificationTracker.logOpened(
+                this, intent);
         if (intent != null && "map".equals(
                 intent.getStringExtra("initial_review_tab"))) {
             double lat = intent.getDoubleExtra("focus_lat", Double.NaN);

@@ -41,6 +41,14 @@ public class AtlasDailyReminderReceiver extends BroadcastReceiver {
     private void deliver(Context context) {
         AtlasReminderPreferences preferences = new AtlasReminderPreferences(context);
         if (!preferences.isDailyEnabled()) {
+            ResearchNotificationTracker.logSkipped(
+                    context,
+                    CATEGORY_SHORT,
+                    "setting_disabled");
+            ResearchNotificationTracker.logSkipped(
+                    context,
+                    CATEGORY_LONG,
+                    "setting_disabled");
             AtlasDailyReminderScheduler.cancel(context);
             return;
         }
@@ -73,6 +81,10 @@ public class AtlasDailyReminderReceiver extends BroadcastReceiver {
             int dayOffset,
             boolean longTerm) {
         if (preferences.wasDailyCategorySent(category, today)) {
+            ResearchNotificationTracker.logSkipped(
+                    context,
+                    category,
+                    "already_sent_today");
             return;
         }
         long[] window = AtlasReminderSchedule.dayWindow(nowMs, dayOffset, timeZone);
@@ -83,6 +95,10 @@ public class AtlasDailyReminderReceiver extends BroadcastReceiver {
                         window[1],
                         AtlasReminderSchedule.preferredTimeInWindow(window[0], timeZone));
         if (selected == null) {
+            ResearchNotificationTracker.logSkipped(
+                    context,
+                    category,
+                    "no_eligible_moment");
             return;
         }
         if (!AtlasNotificationHelper.postDaily(context, selected, longTerm)) {

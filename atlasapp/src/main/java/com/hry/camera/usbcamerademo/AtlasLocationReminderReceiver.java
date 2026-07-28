@@ -38,10 +38,18 @@ public class AtlasLocationReminderReceiver extends BroadcastReceiver {
 
     private void handle(Context context, Intent intent) {
         if (intent == null) {
+            ResearchNotificationTracker.logSkipped(
+                    context,
+                    "location",
+                    "invalid_cluster_payload");
             return;
         }
         AtlasReminderPreferences preferences = new AtlasReminderPreferences(context);
         if (!preferences.isLocationEnabled()) {
+            ResearchNotificationTracker.logSkipped(
+                    context,
+                    "location",
+                    "setting_disabled");
             AtlasLocationReminderRegistrar.removeAll(context);
             return;
         }
@@ -52,6 +60,10 @@ public class AtlasLocationReminderReceiver extends BroadcastReceiver {
         String clusterKey = intent.getStringExtra(
                 AtlasLocationReminderRegistrar.EXTRA_CLUSTER_KEY);
         if (Double.isNaN(clusterLat) || Double.isNaN(clusterLng) || clusterKey == null) {
+            ResearchNotificationTracker.logSkipped(
+                    context,
+                    "location",
+                    "invalid_cluster_payload");
             return;
         }
 
@@ -65,6 +77,10 @@ public class AtlasLocationReminderReceiver extends BroadcastReceiver {
         if (currentFixCanVeto && AtlasLocationClusterer.distanceMeters(
                 current.getLatitude(), current.getLongitude(), clusterLat, clusterLng)
                 > AppConfig.SPECIAL_LOCATION_RADIUS_METERS) {
+            ResearchNotificationTracker.logSkipped(
+                    context,
+                    "location",
+                    "current_fix_outside_radius");
             return;
         }
 
@@ -87,13 +103,28 @@ public class AtlasLocationReminderReceiver extends BroadcastReceiver {
             }
         }
         if (!hasOldEligibleMoment) {
+            ResearchNotificationTracker.logSkipped(
+                    context,
+                    "location",
+                    "no_old_eligible_moment");
             return;
         }
 
         String today = AtlasReminderSchedule.localDate(nowMs, TimeZone.getDefault());
-        if (preferences.wasLocationSentToday(today, clusterKey)
-                || !AtlasReminderSchedule.cooldownElapsed(
+        if (preferences.wasLocationSentToday(
+                today, clusterKey)) {
+            ResearchNotificationTracker.logSkipped(
+                    context,
+                    "location",
+                    "already_sent_place_today");
+            return;
+        }
+        if (!AtlasReminderSchedule.cooldownElapsed(
                 preferences.getLastLocationSentAt(), nowMs)) {
+            ResearchNotificationTracker.logSkipped(
+                    context,
+                    "location",
+                    "cooldown_active");
             return;
         }
         if (!AtlasNotificationHelper.postLocation(
