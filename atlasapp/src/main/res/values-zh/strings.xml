@@ -205,6 +205,7 @@
 
     <!-- 需求1改版：recording页面.jpg 视觉还原 -->
     <string name="device_connected">设备已连接</string>
+    <string name="device_connecting">设备连接中…</string>
     <string name="device_disconnected">设备未连接</string>
     <string name="recording_idle_headline">准备好记录你的笑声了吗？</string>
     <string name="recording_active_headline">正在记录，笑出声吧</string>

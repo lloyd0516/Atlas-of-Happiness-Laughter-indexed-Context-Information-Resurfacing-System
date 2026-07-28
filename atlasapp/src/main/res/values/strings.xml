@@ -206,6 +206,7 @@
 
     <!-- Recording page redesign (materials/recording页面.jpg) -->
     <string name="device_connected">Device connected</string>
+    <string name="device_connecting">Connecting device…</string>
     <string name="device_disconnected">Device disconnected</string>
     <string name="recording_idle_headline">Ready to catch\nyour laughs?</string>
     <string name="recording_active_headline">Recording your\njoyful moments</string>

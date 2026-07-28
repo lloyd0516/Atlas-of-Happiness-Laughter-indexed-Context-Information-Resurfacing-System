@@ -48,14 +48,14 @@
                 android:id="@+id/deviceStatusDot"
                 android:layout_width="8dp"
                 android:layout_height="8dp"
-                android:background="@drawable/atlas_calendar_event_dot" />
+                android:background="@drawable/atlas_device_dot_disconnected" />
 
             <TextView
                 android:id="@+id/txtDeviceStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="6dp"
-                android:text="@string/device_connected"
+                android:text="@string/device_disconnected"
                 android:textColor="@color/atlas_text_secondary"
                 android:textSize="12sp" />
         </LinearLayout>

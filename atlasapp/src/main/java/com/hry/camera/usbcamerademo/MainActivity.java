@@ -125,6 +125,9 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
     private TextView mRecordingPrompt;
     private TextView mTxtRecordingPromptArt;
     private TextView mTxtDeviceStatus;
+    private View mDeviceStatusDot;
+    private AtlasDeviceConnectionState.State mDeviceConnectionState =
+            AtlasDeviceConnectionState.State.DISCONNECTED;
     private TextView mTxtStatLaughterCount;
     private TextView mTxtStatDuration;
     private TextView mTxtStatEventCount;
@@ -151,6 +154,8 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
         mRecordingPrompt = (TextView) findViewById(R.id.recordingPrompt);
         mTxtRecordingPromptArt = (TextView) findViewById(R.id.txtRecordingPromptArt);
         mTxtDeviceStatus = (TextView) findViewById(R.id.txtDeviceStatus);
+        mDeviceStatusDot = findViewById(R.id.deviceStatusDot);
+        renderDeviceConnectionState();
 
         mRecordingLayout = (LinearLayout) findViewById(R.id.recordingLayout);
         mRecordingImage = (ImageView) findViewById(R.id.recordingImage);
@@ -279,7 +284,7 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
             } else {
                 mManualPreviewRequested = true;
                 mCameraOpenedForAutoOnly = false;
-                mCameraThread.chooseDevice();
+                chooseCameraDevice();
             }
         }
     }
@@ -402,16 +407,20 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
                 case USBCameraThread.ERR_NONE:
                     break;
                 case USBCameraThread.ERR_CHOOSE_DEVICE:
+                    postDeviceConnectionEvent(AtlasDeviceConnectionState.Event.NO_DEVICE);
                     mJoyfulAutoOpenInFlight = false;
                     clearPendingJoyfulAutoRequests("choose_device_failed");
                     mHandler.obtainMessage(MSG_SHOWMSG, "没有找到摄像头!").sendToTarget();
                     break;
                 case USBCameraThread.ERR_OPEN_DEVICE:
+                    postDeviceConnectionEvent(
+                            AtlasDeviceConnectionState.Event.CAMERA_OPEN_FAILED);
                     mJoyfulAutoOpenInFlight = false;
                     clearPendingJoyfulAutoRequests("open_camera_failed");
                     mHandler.obtainMessage(MSG_SHOWMSG, "打开摄像头错误!").sendToTarget();
                     break;
                 case USBCameraThread.ERR_START_PREVIEW:
+                    postDeviceConnectionEvent(AtlasDeviceConnectionState.Event.PREVIEW_FAILED);
                     mJoyfulAutoOpenInFlight = false;
                     clearPendingJoyfulAutoRequests("start_preview_failed");
                     mHandler.obtainMessage(MSG_SHOWMSG, "摄像头开启预览错误!").sendToTarget();
@@ -421,6 +430,7 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
                     break;
 
                 case USBCameraThread.SUCCESS_OPEN_CAMERA:
+                    postDeviceConnectionEvent(AtlasDeviceConnectionState.Event.CAMERA_OPENED);
                     mHandler.sendEmptyMessage(MSG_CAMERA_OPENED);
                     break;
             }
@@ -489,7 +499,7 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
                     } else {
                         mManualPreviewRequested = true;
                         mCameraOpenedForAutoOnly = false;
-                        mCameraThread.chooseDevice();
+                        chooseCameraDevice();
                     }
                     break;
 
@@ -546,6 +556,7 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
     private final static int MSG_RECORD_PREPARED = 0x07;
     private final static int MSG_RECORD_STOPPED = 0x08;
     private final static int MSG_JOYFUL_AUTO_STOP_RECORD = 0x09;
+    private final static int MSG_DEVICE_CONNECTION_EVENT = 0x0A;
 
     Handler mHandler = new Handler() {
 
@@ -614,6 +625,9 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
                     if (mJoyfulAutoRecording) {
                         stopRecord();
                     }
+                    break;
+                case MSG_DEVICE_CONNECTION_EVENT:
+                    applyDeviceConnectionEvent((AtlasDeviceConnectionState.Event) msg.obj);
                     break;
 
                 default:
@@ -786,6 +800,48 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
                 && hasPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE);
     }
 
+    private void chooseCameraDevice() {
+        if (mCameraThread == null) {
+            return;
+        }
+        postDeviceConnectionEvent(AtlasDeviceConnectionState.Event.CONNECT_REQUESTED);
+        mCameraThread.chooseDevice();
+    }
+
+    private void postDeviceConnectionEvent(AtlasDeviceConnectionState.Event event) {
+        mHandler.obtainMessage(MSG_DEVICE_CONNECTION_EVENT, event).sendToTarget();
+    }
+
+    private void applyDeviceConnectionEvent(AtlasDeviceConnectionState.Event event) {
+        mDeviceConnectionState = AtlasDeviceConnectionState.transition(
+                mDeviceConnectionState, event);
+        renderDeviceConnectionState();
+    }
+
+    private void renderDeviceConnectionState() {
+        if (mTxtDeviceStatus == null || mDeviceStatusDot == null) {
+            return;
+        }
+        switch (mDeviceConnectionState) {
+            case CONNECTED:
+                mTxtDeviceStatus.setText(R.string.device_connected);
+                mDeviceStatusDot.setBackgroundResource(
+                        R.drawable.atlas_device_dot_connected);
+                break;
+            case CONNECTING:
+                mTxtDeviceStatus.setText(R.string.device_connecting);
+                mDeviceStatusDot.setBackgroundResource(
+                        R.drawable.atlas_device_dot_connecting);
+                break;
+            case DISCONNECTED:
+            default:
+                mTxtDeviceStatus.setText(R.string.device_disconnected);
+                mDeviceStatusDot.setBackgroundResource(
+                        R.drawable.atlas_device_dot_disconnected);
+                break;
+        }
+    }
+
     private void refreshPreviewUi() {
         boolean showPreview = mManualPreviewRequested && mCameraThread != null && mCameraThread.isOpen();
         updatePreviewSurfaceLayout(getDisplayPreviewWidth(), getDisplayPreviewHeight());
@@ -888,7 +944,7 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
         }
         mCameraOpenedForAutoOnly = !mManualPreviewRequested;
         mJoyfulAutoOpenInFlight = true;
-        mCameraThread.chooseDevice();
+        chooseCameraDevice();
     }
 
     private void drainPendingJoyfulAutoActions() {
@@ -966,10 +1022,14 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
             switch (state) {
                 case USBCameraAPI.STATE_DEVICE_ARRIVAL:
                     Log.e(TAG, "device arrival");
+                    postDeviceConnectionEvent(
+                            AtlasDeviceConnectionState.Event.USB_ARRIVED);
                     break;
 
                 case USBCameraAPI.STATE_DEVICE_REMOVAL:
                     Log.e(TAG, "device removal");
+                    postDeviceConnectionEvent(
+                            AtlasDeviceConnectionState.Event.USB_REMOVED);
                     mJoyfulAutoOpenInFlight = false;
                     mCameraOpenedForAutoOnly = false;
 
@@ -986,12 +1046,16 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
                     break;
 
                 case USBCameraAPI.STATE_NO_PERMISSION:
+                    postDeviceConnectionEvent(
+                            AtlasDeviceConnectionState.Event.USB_PERMISSION_DENIED);
                     mJoyfulAutoOpenInFlight = false;
                     clearPendingJoyfulAutoRequests("usb_permission_denied");
                     mHandler.obtainMessage(MSG_SHOWMSG, "USB device permission denied").sendToTarget();
                     break;
 
                 case USBCameraAPI.STATE_HAS_PERMISSION:
+                    postDeviceConnectionEvent(
+                            AtlasDeviceConnectionState.Event.USB_PERMISSION_GRANTED);
                     if (mCameraThread!=null) {
                         mCameraThread.openCamera(VIDEO_W, VIDEO_H, VIDEO_FORMAT,
                                 VIDEO_ORIENTATION, VIDEO_MINFPS, VIDEO_MAXFPS, VIDEO_BANDWIDTH,
