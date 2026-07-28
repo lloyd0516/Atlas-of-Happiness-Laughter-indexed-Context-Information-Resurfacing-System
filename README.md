@@ -346,7 +346,7 @@ Android Studio 中选择 `atlasapp` configuration 和真机后即可运行。没
 | Build type | Debug 研究/测试包，不是正式 Release |
 | Package | `com.hry.camera.atlasofhappiness` |
 | 文件大小 | 约 4.4 MB |
-| SHA-256 | `052179f29e725d6dcdd3c5aaf399586ca737a5282ebee8a2f24f68ede8a2065b` |
+| SHA-256 | `bd7d17a44976a024b40516f54dca85f84df76a631d40141cb1508a99ebe7b8e9` |
 
 > [!NOTE]
 > 该 APK 当前是本地生成产物，未纳入源码 commit。只有维护者后续将它上传到 GitHub
