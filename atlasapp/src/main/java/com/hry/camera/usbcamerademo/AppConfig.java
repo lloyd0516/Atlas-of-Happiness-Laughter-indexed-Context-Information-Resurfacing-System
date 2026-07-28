@@ -43,6 +43,22 @@ public final class AppConfig {
     /** Padding applied around a laughter detection when extracting the related audio window. */
     public static final double LAUGHTER_AUDIO_PADDING_SEC = 2.5;
 
+    // ---- App-only laughter playback enhancement ----
+    /** Duration of one RMS analysis frame. */
+    public static final int LAUGHTER_PLAYBACK_FRAME_MS = 20;
+    /** Analyze the loudest fraction of frames so extraction padding does not mask a brief laugh. */
+    public static final double LAUGHTER_PLAYBACK_TOP_FRAME_RATIO = 0.05;
+    /** Clips at or above this effective level are played without gain. */
+    public static final double LAUGHTER_PLAYBACK_QUIET_THRESHOLD_DBFS = -24.0;
+    /** Quiet clips receive this fraction of the distance to the normal threshold. */
+    public static final double LAUGHTER_PLAYBACK_COMPENSATION_RATIO = 0.75;
+    /** Playback gain is positive-only and capped at this value. */
+    public static final double LAUGHTER_PLAYBACK_MAX_BOOST_DB = 18.0;
+    /** Samples above this output level enter soft saturation. */
+    public static final double LAUGHTER_PLAYBACK_PEAK_GUARD_DBFS = -1.0;
+    /** Increment when the analysis or gain algorithm changes so old cache entries are ignored. */
+    public static final int LAUGHTER_PLAYBACK_ALGORITHM_VERSION = 1;
+
     /**
      * Auto photo/video capture is rate-limited to at most once per this many clips.
      * Requirement: changed from 2*clip (60s @ 30s clips) to 4*clip (120s @ 30s clips).
