@@ -86,6 +86,7 @@ public class EventDetailActivity extends AppCompatActivity {
     private MediaPlayer mediaPlayer;
     private MediaRecorder mediaRecorder;
     private final ExecutorService waveformExecutor = Executors.newSingleThreadExecutor();
+    private final ExecutorService audioPreparationExecutor = Executors.newSingleThreadExecutor();
     private final Map<String, float[]> waveformCache = new ConcurrentHashMap<>();
     private final Handler audioUiHandler = new Handler(Looper.getMainLooper());
     private AtlasAudioPlaybackState.State playbackState =
@@ -97,6 +98,10 @@ public class EventDetailActivity extends AppCompatActivity {
     private ResearchPlaybackTracker activePlaybackTracker;
     private boolean audioPaused;
     private boolean audioPreparing;
+    private long audioPreparationGeneration;
+    private double activePlaybackGainDb;
+    private int activePlaybackGainAlgorithmVersion =
+            AppConfig.LAUGHTER_PLAYBACK_ALGORITHM_VERSION;
     private String activeAudioNotePath;
     private String pendingPhotoPath;
     private ResearchVisitTimer detailVisitTimer;
@@ -293,6 +298,8 @@ public class EventDetailActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+        audioPreparationGeneration += 1L;
+        audioPreparationExecutor.shutdownNow();
         waveformExecutor.shutdownNow();
         super.onDestroy();
     }
@@ -815,7 +822,10 @@ public class EventDetailActivity extends AppCompatActivity {
                     ResearchInteractionLogger.properties(
                             "position_ms", safeAudioPosition(),
                             "duration_ms", safeAudioDuration(),
-                            "resumed", true));
+                            "resumed", true,
+                            "gain_db", activePlaybackGainDb,
+                            "gain_algorithm_version",
+                            activePlaybackGainAlgorithmVersion));
             renderPlaying(binding);
             scheduleAudioProgress();
             devInfo("audio playback resumed: " + binding.path);
@@ -1239,15 +1249,66 @@ public class EventDetailActivity extends AppCompatActivity {
             binding.row.setEnabled(false);
         }
         audioStatus.setText(path);
+        final long requestGeneration = ++audioPreparationGeneration;
+        final File originalFile = new File(path);
+        final File playbackCacheDir =
+                new File(getCacheDir(), "laughter_playback");
+        try {
+            audioPreparationExecutor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    final AtlasLaughterPlaybackPreparer.Result result =
+                            "laughter_audio".equals(mediaType)
+                                    ? AtlasLaughterPlaybackPreparer.prepare(
+                                            originalFile,
+                                            playbackCacheDir)
+                                    : new AtlasLaughterPlaybackPreparer.Result(
+                                            originalFile,
+                                            0.0,
+                                            false,
+                                            null);
+                    audioUiHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (isFinishing()
+                                    || requestGeneration
+                                            != audioPreparationGeneration
+                                    || !path.equals(activePlaybackPath)) {
+                                return;
+                            }
+                            prepareMediaPlayer(
+                                    binding,
+                                    path,
+                                    mediaType,
+                                    result);
+                        }
+                    });
+                }
+            });
+        } catch (RuntimeException error) {
+            failAudioPlayback(error, "preparation_dispatch_error");
+            Toast.makeText(this, R.string.audio_playback_failed, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void prepareMediaPlayer(
+            final AudioRowBinding binding,
+            final String originalPath,
+            final String mediaType,
+            final AtlasLaughterPlaybackPreparer.Result result
+    ) {
         try {
             final MediaPlayer player = new MediaPlayer();
             mediaPlayer = player;
+            activePlaybackGainDb = result.gainDb;
+            activePlaybackGainAlgorithmVersion = result.algorithmVersion;
             player.setAudioStreamType(AudioManager.STREAM_MUSIC);
-            player.setDataSource(path);
+            player.setDataSource(result.playbackFile.getAbsolutePath());
             player.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
                 @Override
                 public void onPrepared(MediaPlayer preparedPlayer) {
-                    if (mediaPlayer != preparedPlayer || !path.equals(activePlaybackPath)) {
+                    if (mediaPlayer != preparedPlayer
+                            || !originalPath.equals(activePlaybackPath)) {
                         return;
                     }
                     try {
@@ -1264,22 +1325,27 @@ public class EventDetailActivity extends AppCompatActivity {
                                 SystemClock.elapsedRealtime());
                         logMediaPlaybackEvent(
                                 ResearchEventNames.MEDIA_PLAY_STARTED,
-                                path,
+                                originalPath,
                                 mediaType,
                                 ResearchInteractionLogger.properties(
                                         "position_ms",
                                         preparedPlayer.getCurrentPosition(),
                                         "duration_ms",
                                         preparedPlayer.getDuration(),
-                                        "resumed", false));
+                                        "resumed", false,
+                                        "gain_db",
+                                        activePlaybackGainDb,
+                                        "gain_algorithm_version",
+                                        activePlaybackGainAlgorithmVersion));
                         renderPlaying(binding);
                         scheduleAudioProgress();
-                        devInfo("audio playback started: " + path);
+                        devInfo("audio playback started: " + originalPath);
                     } catch (RuntimeException error) {
-                        failAudioPlayback(
-                                error, "player_error");
-                        Toast.makeText(EventDetailActivity.this,
-                                R.string.audio_playback_failed, Toast.LENGTH_SHORT).show();
+                        failAudioPlayback(error, "player_error");
+                        Toast.makeText(
+                                EventDetailActivity.this,
+                                R.string.audio_playback_failed,
+                                Toast.LENGTH_SHORT).show();
                     }
                 }
             });
@@ -1287,7 +1353,7 @@ public class EventDetailActivity extends AppCompatActivity {
                 @Override
                 public void onCompletion(MediaPlayer completedPlayer) {
                     if (mediaPlayer == completedPlayer) {
-                        devInfo("audio playback completed: " + path);
+                        devInfo("audio playback completed: " + originalPath);
                         long playedDurationMs =
                                 activePlaybackTracker == null
                                         ? 0L
@@ -1295,7 +1361,7 @@ public class EventDetailActivity extends AppCompatActivity {
                                                 SystemClock.elapsedRealtime());
                         logMediaPlaybackEvent(
                                 ResearchEventNames.MEDIA_PLAY_COMPLETED,
-                                path,
+                                originalPath,
                                 mediaType,
                                 ResearchInteractionLogger.properties(
                                         "position_ms",
@@ -1305,28 +1371,37 @@ public class EventDetailActivity extends AppCompatActivity {
                                         "played_duration_ms",
                                         playedDurationMs));
                         finishAudioPlayback(
-                                AtlasAudioPlaybackState.Event.COMPLETED, null);
+                                AtlasAudioPlaybackState.Event.COMPLETED,
+                                null);
                     }
                 }
             });
             player.setOnErrorListener(new MediaPlayer.OnErrorListener() {
                 @Override
-                public boolean onError(MediaPlayer failedPlayer, int what, int extra) {
+                public boolean onError(
+                        MediaPlayer failedPlayer,
+                        int what,
+                        int extra) {
                     if (mediaPlayer != failedPlayer) {
                         return true;
                     }
                     RuntimeException error = new RuntimeException(
                             "MediaPlayer error what=" + what + " extra=" + extra);
                     failAudioPlayback(error, "player_error");
-                    Toast.makeText(EventDetailActivity.this,
-                            R.string.audio_playback_failed, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(
+                            EventDetailActivity.this,
+                            R.string.audio_playback_failed,
+                            Toast.LENGTH_SHORT).show();
                     return true;
                 }
             });
             player.prepareAsync();
         } catch (Exception error) {
             failAudioPlayback(error, "prepare_error");
-            Toast.makeText(this, R.string.audio_playback_failed, Toast.LENGTH_SHORT).show();
+            Toast.makeText(
+                    this,
+                    R.string.audio_playback_failed,
+                    Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -1353,6 +1428,7 @@ public class EventDetailActivity extends AppCompatActivity {
     }
 
     private void stopAudioPlayback(String reason) {
+        audioPreparationGeneration += 1L;
         if (activePlaybackTracker != null && !audioPaused) {
             long positionMs = safeAudioPosition();
             long playedDurationMs = activePlaybackTracker.pause(
@@ -1501,6 +1577,9 @@ public class EventDetailActivity extends AppCompatActivity {
         activePlaybackTracker = null;
         audioPaused = false;
         audioPreparing = false;
+        activePlaybackGainDb = 0.0;
+        activePlaybackGainAlgorithmVersion =
+                AppConfig.LAUGHTER_PLAYBACK_ALGORITHM_VERSION;
     }
 
     private void resetAudioBinding(AudioRowBinding binding) {
