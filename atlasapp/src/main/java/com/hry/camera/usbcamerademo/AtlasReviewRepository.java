@@ -1183,6 +1183,9 @@ public class AtlasReviewRepository {
                 timePathKey,
                 eventStartMs,
                 eventEndMs);
+        AtlasCaptureBundleMetadata.copyIfPresent(
+                timeSource,
+                video);
         videos.put(video);
     }
 
@@ -1205,6 +1208,9 @@ public class AtlasReviewRepository {
                 timePathKey,
                 eventStartMs,
                 eventEndMs);
+        AtlasCaptureBundleMetadata.copyIfPresent(
+                timeSource,
+                photo);
         photos.put(photo);
     }
 
