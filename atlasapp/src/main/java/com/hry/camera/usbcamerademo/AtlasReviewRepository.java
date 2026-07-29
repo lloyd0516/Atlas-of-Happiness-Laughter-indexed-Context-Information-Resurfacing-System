@@ -35,6 +35,7 @@ public class AtlasReviewRepository {
         public long startTimeMs;
         public long endTimeMs;
         public int periodCount;
+        public int laughterClipCount;
         public int mediaCount;
         public Double lat;
         public Double lng;
@@ -106,6 +107,7 @@ public class AtlasReviewRepository {
                     summary.startTimeMs = normalized.optLong("start_time_ms", 0L);
                     summary.endTimeMs = normalized.optLong("end_time_ms", summary.startTimeMs);
                     summary.periodCount = normalized.optJSONArray("period_ids") != null ? normalized.optJSONArray("period_ids").length() : 0;
+                    summary.laughterClipCount = AtlasLaughterCountPolicy.count(normalized);
                     summary.mediaCount = countMedia(normalized);
                     JSONObject derived = normalized.optJSONObject("derived_context");
                     JSONObject gps = derived != null ? derived.optJSONObject("gps") : null;
