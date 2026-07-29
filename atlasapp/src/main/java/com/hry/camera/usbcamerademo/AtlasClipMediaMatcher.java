@@ -21,16 +21,27 @@ final class AtlasClipMediaMatcher {
     static final class MatchedCaptureBundle {
         final String bundleId;
         final long bundleTimeMs;
+        final int automationBucketId;
+        final int automationBucketClipCount;
+        final int automationBucketDurationSec;
         final List<String> photoPaths;
         final List<String> videoPaths;
 
         private MatchedCaptureBundle(
                 String bundleId,
                 long bundleTimeMs,
+                int automationBucketId,
+                int automationBucketClipCount,
+                int automationBucketDurationSec,
                 List<String> photoPaths,
                 List<String> videoPaths) {
             this.bundleId = bundleId;
             this.bundleTimeMs = bundleTimeMs;
+            this.automationBucketId = automationBucketId;
+            this.automationBucketClipCount =
+                    automationBucketClipCount;
+            this.automationBucketDurationSec =
+                    automationBucketDurationSec;
             this.photoPaths = Collections.unmodifiableList(
                     new ArrayList<>(photoPaths));
             this.videoPaths = Collections.unmodifiableList(
@@ -44,18 +55,29 @@ final class AtlasClipMediaMatcher {
         final String bundleId;
         final long bundleTriggerTimeMs;
         final int mediaIndex;
+        final int automationBucketId;
+        final int automationBucketClipCount;
+        final int automationBucketDurationSec;
 
         MediaCandidate(
                 String path,
                 long captureTimeMs,
                 String bundleId,
                 long bundleTriggerTimeMs,
-                int mediaIndex) {
+                int mediaIndex,
+                int automationBucketId,
+                int automationBucketClipCount,
+                int automationBucketDurationSec) {
             this.path = path;
             this.captureTimeMs = captureTimeMs;
             this.bundleId = bundleId;
             this.bundleTriggerTimeMs = bundleTriggerTimeMs;
             this.mediaIndex = mediaIndex;
+            this.automationBucketId = automationBucketId;
+            this.automationBucketClipCount =
+                    automationBucketClipCount;
+            this.automationBucketDurationSec =
+                    automationBucketDurationSec;
         }
     }
 
@@ -63,6 +85,9 @@ final class AtlasClipMediaMatcher {
         final String bundleId;
         long explicitTriggerTimeMs = Long.MAX_VALUE;
         long earliestCaptureTimeMs = Long.MAX_VALUE;
+        int automationBucketId = -1;
+        int automationBucketClipCount = -1;
+        int automationBucketDurationSec = -1;
         final List<MediaCandidate> photos = new ArrayList<>();
         final List<MediaCandidate> videos = new ArrayList<>();
 
@@ -79,6 +104,16 @@ final class AtlasClipMediaMatcher {
             earliestCaptureTimeMs = Math.min(
                     earliestCaptureTimeMs,
                     candidate.captureTimeMs);
+            if (candidate.automationBucketId >= 0
+                    && candidate.automationBucketClipCount > 0
+                    && candidate.automationBucketDurationSec > 0) {
+                automationBucketId =
+                        candidate.automationBucketId;
+                automationBucketClipCount =
+                        candidate.automationBucketClipCount;
+                automationBucketDurationSec =
+                        candidate.automationBucketDurationSec;
+            }
             if (video) {
                 videos.add(candidate);
             } else {
@@ -162,6 +197,59 @@ final class AtlasClipMediaMatcher {
             return null;
         }
 
+        List<BundleCandidate> allBundles =
+                collectBundleCandidates(
+                        photos,
+                        videos,
+                        legacyGroupWindowMs);
+
+        BundleCandidate winner = chooseNearestBundle(
+                allBundles,
+                clipTimeMs,
+                maxDeltaMs);
+        return winner != null ? toMatch(winner) : null;
+    }
+
+    static List<MatchedCaptureBundle> collectBundles(
+            JSONArray photos,
+            JSONArray videos,
+            long legacyGroupWindowMs) {
+        ArrayList<MatchedCaptureBundle> result =
+                new ArrayList<>();
+        if (legacyGroupWindowMs < 0L) {
+            return result;
+        }
+        List<BundleCandidate> bundles =
+                collectBundleCandidates(
+                        photos,
+                        videos,
+                        legacyGroupWindowMs);
+        Collections.sort(
+                bundles,
+                new Comparator<BundleCandidate>() {
+                    @Override
+                    public int compare(
+                            BundleCandidate left,
+                            BundleCandidate right) {
+                        int byTime = compareLong(
+                                left.bundleTimeMs(),
+                                right.bundleTimeMs());
+                        return byTime != 0
+                                ? byTime
+                                : left.bundleId.compareTo(
+                                        right.bundleId);
+                    }
+                });
+        for (BundleCandidate bundle : bundles) {
+            result.add(toMatch(bundle));
+        }
+        return result;
+    }
+
+    private static List<BundleCandidate> collectBundleCandidates(
+            JSONArray photos,
+            JSONArray videos,
+            long legacyGroupWindowMs) {
         List<MediaCandidate> photoCandidates =
                 parseCandidates(photos, "photo_path");
         List<MediaCandidate> videoCandidates =
@@ -188,12 +276,7 @@ final class AtlasClipMediaMatcher {
                 legacyPhotos,
                 legacyVideos,
                 legacyGroupWindowMs));
-
-        BundleCandidate winner = chooseNearestBundle(
-                allBundles,
-                clipTimeMs,
-                maxDeltaMs);
-        return winner != null ? toMatch(winner) : null;
+        return allBundles;
     }
 
     private static List<MediaCandidate> parseCandidates(
@@ -224,7 +307,14 @@ final class AtlasClipMediaMatcher {
                     item.optLong(
                             "bundle_trigger_time_ms",
                             -1L),
-                    item.optInt("bundle_media_index", -1)));
+                    item.optInt("bundle_media_index", -1),
+                    item.optInt("automation_bucket_id", -1),
+                    item.optInt(
+                            "automation_bucket_clip_count",
+                            -1),
+                    item.optInt(
+                            "automation_bucket_duration_sec",
+                            -1)));
         }
         return result;
     }
@@ -408,6 +498,9 @@ final class AtlasClipMediaMatcher {
         return new MatchedCaptureBundle(
                 bundle.bundleId,
                 bundle.bundleTimeMs(),
+                bundle.automationBucketId,
+                bundle.automationBucketClipCount,
+                bundle.automationBucketDurationSec,
                 photoPaths,
                 videoPaths);
     }

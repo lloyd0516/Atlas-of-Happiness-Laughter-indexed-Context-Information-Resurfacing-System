@@ -7,6 +7,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
+import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -15,6 +16,104 @@ import static org.junit.Assert.assertNull;
 public class AtlasClipMediaMatcherTest {
     @Rule
     public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+    @Test
+    public void collectsExplicitBundlesInTimeOrderWithBucketMetadata()
+            throws Exception {
+        File p0 = temporaryFolder.newFile("bucket0.jpg");
+        File p1 = temporaryFolder.newFile("bucket1.jpg");
+        JSONArray photos = new JSONArray()
+                .put(bucketItem(
+                        p1,
+                        "photo_path",
+                        100100L,
+                        "bucket-1",
+                        100000L,
+                        0,
+                        1))
+                .put(bucketItem(
+                        p0,
+                        "photo_path",
+                        10100L,
+                        "bucket-0",
+                        10000L,
+                        0,
+                        0));
+
+        List<AtlasClipMediaMatcher.MatchedCaptureBundle> bundles =
+                AtlasClipMediaMatcher.collectBundles(
+                        photos,
+                        new JSONArray(),
+                        15000L);
+
+        assertEquals(2, bundles.size());
+        assertEquals("bucket-0", bundles.get(0).bundleId);
+        assertEquals(0, bundles.get(0).automationBucketId);
+        assertEquals(
+                3,
+                bundles.get(0).automationBucketClipCount);
+        assertEquals(
+                90,
+                bundles.get(0).automationBucketDurationSec);
+        assertEquals("bucket-1", bundles.get(1).bundleId);
+    }
+
+    @Test
+    public void collectionKeepsPartialExplicitBundleSeparate()
+            throws Exception {
+        File explicitPhoto =
+                temporaryFolder.newFile("partial.jpg");
+        File legacyVideo =
+                temporaryFolder.newFile("legacy-partial.mp4");
+
+        List<AtlasClipMediaMatcher.MatchedCaptureBundle> bundles =
+                AtlasClipMediaMatcher.collectBundles(
+                        new JSONArray().put(item(
+                                explicitPhoto,
+                                "photo_path",
+                                10000L,
+                                "partial",
+                                10000L,
+                                0)),
+                        new JSONArray().put(legacyItem(
+                                legacyVideo,
+                                "video_path",
+                                20000L)),
+                        15000L);
+
+        assertEquals(2, bundles.size());
+        assertEquals(1, bundles.get(0).photoPaths.size());
+        assertEquals(0, bundles.get(0).videoPaths.size());
+    }
+
+    @Test
+    public void collectionInfersOneLegacyTwoPhotoOneVideoBundle()
+            throws Exception {
+        File video = temporaryFolder.newFile("collect-legacy.mp4");
+        File p0 = temporaryFolder.newFile("collect-legacy-0.jpg");
+        File p1 = temporaryFolder.newFile("collect-legacy-1.jpg");
+
+        List<AtlasClipMediaMatcher.MatchedCaptureBundle> bundles =
+                AtlasClipMediaMatcher.collectBundles(
+                        new JSONArray()
+                                .put(legacyItem(
+                                        p0,
+                                        "photo_path",
+                                        11500L))
+                                .put(legacyItem(
+                                        p1,
+                                        "photo_path",
+                                        13500L)),
+                        new JSONArray().put(legacyItem(
+                                video,
+                                "video_path",
+                                10000L)),
+                        15000L);
+
+        assertEquals(1, bundles.size());
+        assertEquals(2, bundles.get(0).photoPaths.size());
+        assertEquals(1, bundles.get(0).videoPaths.size());
+    }
 
     @Test
     public void explicitBundleReturnsTwoPhotosAndOneVideo()
@@ -427,6 +526,26 @@ public class AtlasClipMediaMatcherTest {
                 .put("bundle_id", bundleId)
                 .put("bundle_trigger_time_ms", bundleTimeMs)
                 .put("bundle_media_index", mediaIndex);
+    }
+
+    private JSONObject bucketItem(
+            File file,
+            String pathKey,
+            long captureTimeMs,
+            String bundleId,
+            long bundleTimeMs,
+            int mediaIndex,
+            int bucketId) throws Exception {
+        return item(
+                file,
+                pathKey,
+                captureTimeMs,
+                bundleId,
+                bundleTimeMs,
+                mediaIndex)
+                .put("automation_bucket_id", bucketId)
+                .put("automation_bucket_clip_count", 3)
+                .put("automation_bucket_duration_sec", 90);
     }
 
     private JSONObject legacyItem(
