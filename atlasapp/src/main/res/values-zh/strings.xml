@@ -87,7 +87,6 @@
     <string name="event_detail_reflection">用户回顾</string>
     <string name="event_detail_timeline">时间条</string>
     <string name="event_detail_media_empty">这个事件还没有附加媒体。</string>
-    <string name="event_detail_notes_hint">为这个 moment 补充一点温和的备注…</string>
     <string name="event_detail_context_missing">暂时没有可用的上下文信息。</string>
     <string name="event_detail_period_all">全部片段</string>
     <string name="event_map_title">地图回看</string>
@@ -169,7 +168,6 @@
     <string name="save_decision_delete_confirm">删除后该事件及其媒体文件将无法恢复，确定要删除吗？</string>
     <string name="save_decision_save_push">保存，并允许推送回顾建议</string>
     <string name="save_decision_save_no_push">保存，但不推送回顾建议</string>
-    <string name="save_decision_edit_now">我要修改，上传</string>
 
     <!-- 组织视图（需求3）：地图 / 日历 / 时间线 -->
     <string name="review_tab_map">地图</string>

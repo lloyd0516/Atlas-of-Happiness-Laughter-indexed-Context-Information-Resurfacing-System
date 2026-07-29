@@ -1,7 +1,6 @@
 package com.hry.camera.usbcamerademo;
 
 import android.content.DialogInterface;
-import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -191,9 +190,9 @@ public class EventSupplementActivity extends AppCompatActivity {
                         if (which == 0) {
                             confirmDelete();
                         } else if (which == 1) {
-                            applyDecisionAndOfferEdit("save_push");
+                            applyDecision("save_push");
                         } else {
-                            applyDecisionAndOfferEdit("save_no_push");
+                            applyDecision("save_no_push");
                         }
                     }
                 })
@@ -239,44 +238,20 @@ public class EventSupplementActivity extends AppCompatActivity {
                 .show();
     }
 
-    private void applyDecisionAndOfferEdit(String action) {
+    private void applyDecision(String action) {
         String previousAction =
                 repository.getSaveDecisionAction(eventJson);
         boolean saved = repository.saveDecision(eventJson, action);
         if (saved) {
             logSaveDecisionIfChanged(previousAction, action);
+            AtlasResurfacingManager.refreshLocationsAsync(this);
         }
-        AtlasResurfacingManager.refreshLocationsAsync(this);
-        new AlertDialog.Builder(this)
-                .setMessage(R.string.event_detail_notes_hint)
-                .setPositiveButton(R.string.save_decision_edit_now, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        ResearchInteractionLogger.log(
-                                EventSupplementActivity.this,
-                                ResearchEventNames.MOMENT_EDIT_STARTED,
-                                sessionId,
-                                eventId,
-                                null,
-                                ResearchInteractionLogger.properties(
-                                        "entry_source",
-                                        "post_session_decision"));
-                        Intent intent = new Intent(EventSupplementActivity.this, EventDetailActivity.class);
-                        intent.putExtra("event_id", eventId);
-                        intent.putExtra("session_id", sessionId);
-                        ResearchNavigation.withSource(
-                                intent, "post_session_decision");
-                        startActivity(intent);
-                        finish();
-                    }
-                })
-                .setNegativeButton(R.string.btn_back, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        finish();
-                    }
-                })
-                .show();
+        if (AtlasPostDecisionFlow.afterSave(saved)
+                == AtlasPostDecisionFlow.Action.FINISH) {
+            finish();
+        } else {
+            showSaveDecisionDialog();
+        }
     }
 
     private void logSaveDecisionIfChanged(

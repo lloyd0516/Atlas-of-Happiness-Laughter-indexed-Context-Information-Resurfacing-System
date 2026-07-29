@@ -88,7 +88,6 @@
     <string name="event_detail_reflection">User Reflection</string>
     <string name="event_detail_timeline">Timeline Strip</string>
     <string name="event_detail_media_empty">No media attached to this event yet.</string>
-    <string name="event_detail_notes_hint">Add a calm note for this moment?</string>
     <string name="event_detail_context_missing">Context data is currently unavailable.</string>
     <string name="event_detail_period_all">All clips</string>
     <string name="event_map_title">Map Review</string>
@@ -170,7 +169,6 @@
     <string name="save_decision_delete_confirm">This will permanently delete this event and its media. This cannot be undone.</string>
     <string name="save_decision_save_push">Save, allow resurfacing suggestions</string>
     <string name="save_decision_save_no_push">Save, but don\'t resurface this</string>
-    <string name="save_decision_edit_now">Edit now</string>
 
     <!-- Organization views (requirement 3): map / calendar / timeline -->
     <string name="review_tab_map">Map</string>
