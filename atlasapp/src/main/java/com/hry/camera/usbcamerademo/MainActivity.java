@@ -318,7 +318,17 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
             TextView title = (TextView) card.findViewById(R.id.txtRecentTitle);
             TextView meta = (TextView) card.findViewById(R.id.txtRecentMeta);
             title.setText(!TextUtils.isEmpty(event.locationName) ? event.locationName : event.eventId);
-            meta.setText(event.timeRangeText + "  ·  " + getString(R.string.label_period) + " " + event.periodCount);
+            String laughterCountText =
+                    event.laughterClipCount > 0
+                            ? getString(
+                            R.string.event_laughter_count,
+                            event.laughterClipCount)
+                            : getString(
+                            R.string.event_laughter_count_empty);
+            meta.setText(
+                    event.timeRangeText
+                            + "  ·  "
+                            + laughterCountText);
             card.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {

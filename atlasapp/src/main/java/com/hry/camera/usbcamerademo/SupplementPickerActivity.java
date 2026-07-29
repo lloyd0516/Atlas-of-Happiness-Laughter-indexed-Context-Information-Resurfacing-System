@@ -64,7 +64,13 @@ public class SupplementPickerActivity extends AppCompatActivity {
             View card = inflater.inflate(R.layout.item_event_card, eventContainer, false);
             ((TextView) card.findViewById(R.id.txtEventTime)).setText(event.timeRangeText);
             ((TextView) card.findViewById(R.id.txtEventBody)).setText(event.timeRangeText);
-            String metaText = getString(R.string.label_period) + ": " + event.periodCount;
+            String metaText =
+                    event.laughterClipCount > 0
+                            ? getString(
+                            R.string.event_laughter_count,
+                            event.laughterClipCount)
+                            : getString(
+                            R.string.event_laughter_count_empty);
             ((TextView) card.findViewById(R.id.txtEventMeta)).setText(metaText);
             ((ImageView) card.findViewById(R.id.imgEventIcon)).setImageResource(R.drawable.ic_atlas_laughter);
             card.setOnClickListener(new View.OnClickListener() {

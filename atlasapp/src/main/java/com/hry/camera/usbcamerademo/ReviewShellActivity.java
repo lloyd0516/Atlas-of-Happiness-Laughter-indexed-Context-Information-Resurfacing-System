@@ -390,13 +390,28 @@ public class ReviewShellActivity extends AppCompatActivity {
         for (AtlasReviewRepository.EventSummary item : located) {
             distinctLocations.add(!TextUtils.isEmpty(item.locationName) ? item.locationName : (item.lat + "," + item.lng));
         }
+        int mapLaughterCount =
+                AtlasLaughterCountPresentation.total(located);
         txtMapStatsHeadline.setText(getString(R.string.map_stats_headline, distinctLocations.size()));
-        txtMapStatsSubline.setText(getString(R.string.map_stats_subline, located.size()));
+        txtMapStatsSubline.setText(
+                mapLaughterCount > 0
+                        ? getString(
+                        R.string.map_stats_subline,
+                        mapLaughterCount)
+                        : getString(
+                        R.string.event_laughter_count_empty));
 
         String topLocation = located.get(0).locationName;
         txtMapTrailSummary.setText(TextUtils.isEmpty(topLocation)
-                ? getString(R.string.map_trail_summary_generic, located.size())
-                : getString(R.string.map_trail_summary, located.size(), topLocation));
+                ? (mapLaughterCount > 0
+                ? getString(
+                R.string.map_trail_summary_generic,
+                mapLaughterCount)
+                : getString(
+                R.string.event_laughter_count_empty))
+                : getString(
+                R.string.map_trail_summary,
+                distinctLocations.size()));
 
         bindingMapCarousel = true;
         mapEventStack.setAdapter(R.layout.item_map_stack_card, located.size(), new StackedCardView.Binder() {
@@ -406,7 +421,8 @@ public class ReviewShellActivity extends AppCompatActivity {
                 ((TextView) card.findViewById(R.id.txtStackCardTitle)).setText(
                         !TextUtils.isEmpty(event.locationName) ? event.locationName : event.eventId);
                 ((TextView) card.findViewById(R.id.txtStackCardMeta)).setText(event.timeRangeText
-                        + "  ·  " + getString(R.string.map_stack_laughter_count, event.periodCount));
+                        + "  ·  " + laughterCountText(
+                        event.laughterClipCount));
             }
         });
         mapEventStack.setOnCardClickListener(new StackedCardView.OnCardClickListener() {
@@ -507,8 +523,16 @@ public class ReviewShellActivity extends AppCompatActivity {
             TextView dayCaption = cell.findViewById(R.id.txtDayEventCount);
             dayNumber.setText(String.valueOf(day));
             int dayEventCount = dayEvents != null ? dayEvents.size() : 0;
-            dayCaption.setText(dayEventCount > 0 ? getString(R.string.calendar_day_laughter_count, dayEventCount) : "");
-            dayCaption.setVisibility(dayEventCount > 0 ? View.VISIBLE : View.GONE);
+            int dayLaughterCount =
+                    AtlasLaughterCountPresentation.total(dayEvents);
+            dayCaption.setText(
+                    dayEventCount > 0
+                            ? laughterCountText(dayLaughterCount)
+                            : "");
+            dayCaption.setVisibility(
+                    dayEventCount > 0
+                            ? View.VISIBLE
+                            : View.GONE);
             boolean isToday = isCurrentMonth && today.get(Calendar.DAY_OF_MONTH) == day;
             boolean isSelected = selectedDayStartMs != null && selectedDayStartMs == dayStartMs;
             dayNumber.setBackgroundResource(isSelected || isToday ? R.drawable.atlas_calendar_day_bg : 0);
@@ -580,7 +604,11 @@ public class ReviewShellActivity extends AppCompatActivity {
             ((TextView) card.findViewById(R.id.txtCalEventDuration)).setText(timeFormat.format(new java.util.Date(event.startTimeMs)));
             String weatherText = TextUtils.isEmpty(event.weather) ? "" : "  ·  " + event.weather;
             ((TextView) card.findViewById(R.id.txtCalEventMeta)).setText(
-                    event.timeRangeText + "  ·  " + getString(R.string.label_period) + " " + event.periodCount + weatherText);
+                    event.timeRangeText
+                            + "  ·  "
+                            + laughterCountText(
+                            event.laughterClipCount)
+                            + weatherText);
             final String eventId = event.eventId;
             final String sessionId = event.sessionId;
             card.setOnClickListener(new View.OnClickListener() {
@@ -648,7 +676,9 @@ public class ReviewShellActivity extends AppCompatActivity {
             timeBubble.setText(timeFormat.format(new java.util.Date(event.startTimeMs)));
             title.setText(!TextUtils.isEmpty(event.locationName) ? event.locationName : event.eventId);
             StringBuilder metaText = new StringBuilder();
-            metaText.append(getString(R.string.label_period)).append(": ").append(event.periodCount);
+            metaText.append(
+                    laughterCountText(
+                            event.laughterClipCount));
             if (!TextUtils.isEmpty(event.weather)) {
                 metaText.append("  •  ").append(event.weather);
             }
@@ -741,6 +771,15 @@ public class ReviewShellActivity extends AppCompatActivity {
     // Shared helpers
     // ---------------------------------------------------------------------------------------
 
+    private String laughterCountText(int laughterClipCount) {
+        return laughterClipCount > 0
+                ? getString(
+                R.string.event_laughter_count,
+                laughterClipCount)
+                : getString(
+                R.string.event_laughter_count_empty);
+    }
+
     private void renderCardList(LinearLayout container, List<AtlasReviewRepository.EventSummary> events, int fallbackIcon) {
         container.removeAllViews();
         LayoutInflater inflater = LayoutInflater.from(this);
@@ -749,7 +788,10 @@ public class ReviewShellActivity extends AppCompatActivity {
             ((TextView) card.findViewById(R.id.txtEventTime)).setText(event.timeRangeText);
             ((TextView) card.findViewById(R.id.txtEventBody)).setText(!TextUtils.isEmpty(event.locationName) ? event.locationName : event.eventId);
             String weatherText = TextUtils.isEmpty(event.weather) ? "" : "  •  " + event.weather;
-            ((TextView) card.findViewById(R.id.txtEventMeta)).setText(getString(R.string.label_period) + ": " + event.periodCount + weatherText);
+            ((TextView) card.findViewById(R.id.txtEventMeta)).setText(
+                    laughterCountText(
+                            event.laughterClipCount)
+                            + weatherText);
             ((ImageView) card.findViewById(R.id.imgEventIcon)).setImageResource(!TextUtils.isEmpty(event.weather)
                     ? AtlasWeatherIconMapper.drawableForKey(event.weatherIconKey)
                     : fallbackIcon);

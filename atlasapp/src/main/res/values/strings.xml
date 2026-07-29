@@ -90,7 +90,7 @@
     <string name="event_detail_media_empty">No media attached to this event yet.</string>
     <string name="event_detail_notes_hint">Add a calm note for this moment?</string>
     <string name="event_detail_context_missing">Context data is currently unavailable.</string>
-    <string name="event_detail_period_all">All periods</string>
+    <string name="event_detail_period_all">All clips</string>
     <string name="event_map_title">Map Review</string>
     <string name="event_map_empty">Events without GPS will stay in the timeline review only.</string>
     <string name="logs_title">Developer Logs</string>
@@ -113,7 +113,7 @@
     <string name="label_video">Video</string>
     <string name="label_photo">Photo</string>
     <string name="label_note">Note</string>
-    <string name="label_period">Period</string>
+    <string name="label_period">Laughter clips</string>
     <string name="label_event">Event</string>
     <string name="label_unknown">Unknown</string>
     <string name="toast_saved">Saved</string>
@@ -227,6 +227,8 @@
     <string name="map_pin_laughter_count">%1$d laughs</string>
     <string name="map_trail_summary_generic">%1$d laughter moments recorded this month</string>
     <string name="map_stack_laughter_count">%1$d laughter clips</string>
+    <string name="event_laughter_count">%1$d laughter clips</string>
+    <string name="event_laughter_count_empty">No laughter clips</string>
     <string name="map_stack_previous">Previous memory</string>
     <string name="map_stack_next">Next memory</string>
     <string name="map_stack_position">%1$d / %2$d</string>

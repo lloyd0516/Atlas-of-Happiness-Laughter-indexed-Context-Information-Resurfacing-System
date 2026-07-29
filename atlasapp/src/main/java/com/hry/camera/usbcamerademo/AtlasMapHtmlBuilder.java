@@ -1,7 +1,5 @@
 package com.hry.camera.usbcamerademo;
 
-import android.text.TextUtils;
-
 import java.util.List;
 import java.util.Locale;
 
@@ -39,10 +37,15 @@ public final class AtlasMapHtmlBuilder {
                 group.lat = lat;
                 group.lng = lng;
                 group.coordIsGps = item.amapLat == null || item.amapLng == null;
-                group.name = !TextUtils.isEmpty(item.locationName) ? item.locationName : item.eventId;
+                group.name = item.locationName != null
+                        && !item.locationName.isEmpty()
+                        ? item.locationName
+                        : item.eventId;
                 groups.put(key, group);
             }
-            group.laughterCount += Math.max(1, item.periodCount);
+            group.laughterCount += Math.max(
+                    0,
+                    item.laughterClipCount);
         }
 
         StringBuilder items = new StringBuilder();
@@ -57,6 +60,11 @@ public final class AtlasMapHtmlBuilder {
             items.append('{')
                     .append("name:'").append(jsEscape(group.name)).append("',")
                     .append("laughs:").append(group.laughterCount).append(',')
+                    .append("laughLabel:'")
+                    .append(jsEscape(
+                            AtlasLaughterCountPresentation.chineseLabel(
+                                    group.laughterCount)))
+                    .append("',")
                     .append("lng:").append(String.format(Locale.US, "%.6f", group.lng)).append(',')
                     .append("lat:").append(String.format(Locale.US, "%.6f", group.lat)).append(',')
                     .append("coord:'").append(group.coordIsGps ? "gps" : "amap").append("'")
@@ -86,7 +94,7 @@ public final class AtlasMapHtmlBuilder {
                 + "map.setDefaultCursor('default');"
                 + "var bounds=[];"
                 + "function esc(s){return String(s||'').replace(/[&<>\"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',\"'\":'&#39;'}[c];});}"
-                + "function content(it){return '<div class=\"pin\"><div class=\"face\"></div><span class=\"label\">'+esc(it.name)+'</span><span class=\"count\">'+it.laughs+'次笑声</span></div>';}"
+                + "function content(it){return '<div class=\"pin\"><div class=\"face\"></div><span class=\"label\">'+esc(it.name)+'</span><span class=\"count\">'+esc(it.laughLabel)+'</span></div>';}"
                 + "function add(it,pos){var m=new AMap.Marker({map:map,position:pos,content:content(it),offset:new AMap.Pixel(-10,-14),anchor:'bottom-left'});bounds.push(pos);}"
                 + "function centerFocus(){if(!focus)return;var p=[focus.lng,focus.lat];"
                 + "if(AMap.convertFrom){AMap.convertFrom(p,'gps',function(status,result){"
