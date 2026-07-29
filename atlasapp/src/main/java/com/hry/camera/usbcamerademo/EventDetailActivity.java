@@ -609,7 +609,7 @@ public class EventDetailActivity extends AppCompatActivity {
                 if (repository.addTextNote(
                         eventJson,
                         text,
-                        "aggregate_window_summary")) {
+                        "clip_card_summary")) {
                     logMomentEditCompleted(
                             "text_note",
                             "add",
@@ -624,10 +624,11 @@ public class EventDetailActivity extends AppCompatActivity {
         final ResearchVisitTimer[] expandedTimer =
                 new ResearchVisitTimer[]{
                         new ResearchVisitTimer()};
-        final String windowResearchId =
+        final String clipResearchId =
                 ResearchIdentifiers.anonymousId(
-                        "window",
-                        eventId + ":" + window.bucketId);
+                        "clip",
+                        window.laughterClips.get(0)
+                                .optString("path", null));
         toggleButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -653,9 +654,9 @@ public class EventDetailActivity extends AppCompatActivity {
                             null,
                             ResearchInteractionLogger.properties(
                                     "section_name",
-                                    "aggregate_window_details",
+                                    "clip_details",
                                     "clip_id",
-                                    windowResearchId,
+                                    clipResearchId,
                                     "expanded_duration_ms",
                                     durationMs));
                 } else {
@@ -672,9 +673,9 @@ public class EventDetailActivity extends AppCompatActivity {
                             null,
                             ResearchInteractionLogger.properties(
                                     "section_name",
-                                    "aggregate_window_details",
+                                    "clip_details",
                                     "clip_id",
-                                    windowResearchId));
+                                    clipResearchId));
                 }
             }
         });

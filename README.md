@@ -336,6 +336,14 @@ joyful_moment/
 兼容字段 `played_duration_ms` 和 `duration_ms` 继续保留。保存决策首次写
 `is_update=false`，后续实际变化追加 `is_update=true`，旧日志行不会被覆盖。
 
+`clip × 3` 回顾窗口改造没有改变该日志的文件路径、JSONL 追加方式、schema envelope、
+事件名或既有属性名。`detail_section_expanded` / `detail_section_collapsed` 仍使用
+`section_name=clip_details` 和匿名化的 `clip_id`，因此已有分析脚本不需要新增事件类型
+或字段。需要注意统计口径：详情页现在一张卡代表一个聚合窗口，所以一次展开/折叠记录
+对应一个窗口，而不是窗口中的每一段 laughter；窗口内每条 laughter 和 longer audio
+的播放仍分别产生原有媒体播放事件，并继续记录实际播放时长与总时长。历史日志不会被
+迁移或覆盖，新交互继续追加到同一个文件。
+
 该研究日志不会写入用户回答文本、“和谁 / 在做什么 / 心情”的内容、转写文本、GPS
 经纬度、地址、媒体内容或媒体文件路径。完整字段和分析口径见
 [`docs/research-log-schema-v1.md`](docs/research-log-schema-v1.md)。
@@ -513,7 +521,7 @@ sh gradlew :atlasapp:testDebugUnitTest
 - `ResearchJsonlWriterTest` / `ResearchLogRecordTest`：研究日志落盘、重试与 schema envelope；
 - `ResearchSessionTimingTest` / `ResearchPlaybackTrackerTest`：session 与实际媒体播放时长。
 
-当前 `fj_aggregate_ver` 的完整 debug JVM 测试共 `121` 项；最近一次完整运行与
+当前 `fj_aggregate_ver` 的完整 debug JVM 测试共 `122` 项；最近一次完整运行与
 `:atlasapp:assembleDebug --rerun-tasks` 均通过。
 
 单元测试不能替代真机验收。涉及 USB、系统闹钟、通知权限、后台 GPS、地图 deep link

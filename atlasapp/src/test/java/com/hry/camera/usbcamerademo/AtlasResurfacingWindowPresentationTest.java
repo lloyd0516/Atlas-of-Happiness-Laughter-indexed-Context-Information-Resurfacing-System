@@ -125,4 +125,23 @@ public class AtlasResurfacingWindowPresentationTest {
                         < xml.indexOf(
                         "windowContextAudioContainerLong"));
     }
+
+    @Test
+    public void aggregateUiKeepsExistingResearchLogCategories()
+            throws Exception {
+        File activity = new File(
+                "atlasapp/src/main/java/com/hry/camera/usbcamerademo/EventDetailActivity.java");
+        if (!activity.isFile()) {
+            activity = new File(
+                    "src/main/java/com/hry/camera/usbcamerademo/EventDetailActivity.java");
+        }
+        String source = new String(
+                Files.readAllBytes(activity.toPath()),
+                Charset.forName("UTF-8"));
+
+        assertTrue(source.contains("\"clip_details\""));
+        assertTrue(source.contains("\"clip_card_summary\""));
+        assertFalse(source.contains("\"aggregate_window_details\""));
+        assertFalse(source.contains("\"aggregate_window_summary\""));
+    }
 }
