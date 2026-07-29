@@ -25,4 +25,34 @@ final class ResearchLogProperties {
         }
         return properties;
     }
+
+    static JSONObject momentSaveDecision(
+            String previousAction,
+            String nextAction
+    ) {
+        if (!isDecisionAction(nextAction)
+                || nextAction.equals(previousAction)) {
+            return null;
+        }
+        JSONObject properties = new JSONObject();
+        try {
+            properties.put("action", nextAction);
+            properties.put(
+                    "push_allowed",
+                    "save_push".equals(nextAction));
+            properties.put(
+                    "is_update",
+                    previousAction != null
+                            && previousAction.length() > 0);
+        } catch (JSONException impossible) {
+            throw new IllegalStateException(impossible);
+        }
+        return properties;
+    }
+
+    private static boolean isDecisionAction(String action) {
+        return "delete".equals(action)
+                || "save_push".equals(action)
+                || "save_no_push".equals(action);
+    }
 }
