@@ -328,6 +328,8 @@ public class EventDetailActivity extends AppCompatActivity {
                             @Override
                             public void onClick(
                                     android.content.DialogInterface dialog, int which) {
+                                String previousAction =
+                                        repository.getSaveDecisionAction(eventJson);
                                 AtlasReviewRepository.EventSummary summary =
                                         findCurrentSummary();
                                 boolean deleted = summary != null
@@ -339,6 +341,19 @@ public class EventDetailActivity extends AppCompatActivity {
                                                 : R.string.event_delete_failed,
                                         Toast.LENGTH_SHORT).show();
                                 if (deleted) {
+                                    JSONObject decisionProperties =
+                                            ResearchLogProperties.momentSaveDecision(
+                                                    previousAction,
+                                                    "delete");
+                                    if (decisionProperties != null) {
+                                        ResearchInteractionLogger.log(
+                                                EventDetailActivity.this,
+                                                ResearchEventNames.MOMENT_SAVE_DECISION,
+                                                sessionId,
+                                                eventId,
+                                                null,
+                                                decisionProperties);
+                                    }
                                     ResearchInteractionLogger.log(
                                             EventDetailActivity.this,
                                             ResearchEventNames.MOMENT_DELETED,

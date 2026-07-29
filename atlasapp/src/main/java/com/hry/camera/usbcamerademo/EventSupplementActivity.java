@@ -206,19 +206,15 @@ public class EventSupplementActivity extends AppCompatActivity {
                 .setPositiveButton(R.string.save_decision_delete, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        ResearchInteractionLogger.log(
-                                EventSupplementActivity.this,
-                                ResearchEventNames.MOMENT_SAVE_DECISION,
-                                sessionId,
-                                eventId,
-                                null,
-                                ResearchInteractionLogger.properties(
-                                        "action", "delete",
-                                        "push_allowed", false));
+                        String previousAction =
+                                repository.getSaveDecisionAction(eventJson);
                         AtlasReviewRepository.EventSummary summary = findSummary();
                         boolean deleted = summary != null
                                 && repository.deleteEventPermanently(summary);
                         if (deleted) {
+                            logSaveDecisionIfChanged(
+                                    previousAction,
+                                    "delete");
                             ResearchInteractionLogger.log(
                                     EventSupplementActivity.this,
                                     ResearchEventNames.MOMENT_DELETED,
@@ -244,17 +240,11 @@ public class EventSupplementActivity extends AppCompatActivity {
     }
 
     private void applyDecisionAndOfferEdit(String action) {
+        String previousAction =
+                repository.getSaveDecisionAction(eventJson);
         boolean saved = repository.saveDecision(eventJson, action);
         if (saved) {
-            ResearchInteractionLogger.log(
-                    this,
-                    ResearchEventNames.MOMENT_SAVE_DECISION,
-                    sessionId,
-                    eventId,
-                    null,
-                    ResearchInteractionLogger.properties(
-                            "action", action,
-                            "push_allowed", "save_push".equals(action)));
+            logSaveDecisionIfChanged(previousAction, action);
         }
         AtlasResurfacingManager.refreshLocationsAsync(this);
         new AlertDialog.Builder(this)
@@ -287,6 +277,26 @@ public class EventSupplementActivity extends AppCompatActivity {
                     }
                 })
                 .show();
+    }
+
+    private void logSaveDecisionIfChanged(
+            String previousAction,
+            String nextAction
+    ) {
+        JSONObject properties =
+                ResearchLogProperties.momentSaveDecision(
+                        previousAction,
+                        nextAction);
+        if (properties == null) {
+            return;
+        }
+        ResearchInteractionLogger.log(
+                this,
+                ResearchEventNames.MOMENT_SAVE_DECISION,
+                sessionId,
+                eventId,
+                null,
+                properties);
     }
 
     private AtlasReviewRepository.EventSummary findSummary() {
