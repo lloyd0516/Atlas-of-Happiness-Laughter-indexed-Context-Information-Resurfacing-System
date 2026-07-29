@@ -72,6 +72,15 @@
                 android:textSize="11sp" />
         </LinearLayout>
 
+        <TextView
+            android:id="@+id/labelWindowLaughterAudio"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/clip_laughter_audio"
+            android:textColor="@color/mock_text_muted"
+            android:textSize="11sp" />
+
         <LinearLayout
             android:id="@+id/windowLaughterAudioContainer"
             android:layout_width="match_parent"
@@ -101,6 +110,16 @@
             android:drawablePadding="4dp"
             android:textColor="@color/mock_text_muted"
             android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/labelWindowContextAudioShort"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/clip_related_context_audio"
+            android:textColor="@color/mock_text_muted"
+            android:textSize="11sp"
+            android:visibility="gone" />
 
         <LinearLayout
             android:id="@+id/windowContextAudioContainerShort"

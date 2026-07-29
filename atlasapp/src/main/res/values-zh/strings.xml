@@ -198,6 +198,7 @@
 
     <!-- 需求4：笑声片段卡片（长期/短期回顾共用） -->
     <string name="clip_label_format">笑声片段 %1$d</string>
+    <string name="clip_laughter_audio">笑声音频</string>
     <string name="clip_related_context_audio">相关上下文音频</string>
     <string name="clip_photos_videos">照片/视频</string>
     <string name="clip_location_date_missing">位置信息暂缺</string>

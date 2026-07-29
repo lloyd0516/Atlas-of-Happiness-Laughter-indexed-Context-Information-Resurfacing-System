@@ -196,6 +196,7 @@
     <string name="recency_just_now">Just now</string>
     <string name="recency_minutes_ago">%1$d min ago</string>
     <string name="recency_days_ago">%1$d days ago</string>
+    <string name="clip_laughter_audio">Laughter audio</string>
     <string name="clip_related_context_audio">Related context audio</string>
     <string name="clip_photos_videos">Photos / video</string>
     <string name="clip_location_date">Location &amp; date</string>

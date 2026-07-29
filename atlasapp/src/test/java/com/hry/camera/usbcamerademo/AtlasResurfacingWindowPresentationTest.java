@@ -105,11 +105,18 @@ public class AtlasResurfacingWindowPresentationTest {
                 Charset.forName("UTF-8"));
 
         assertTrue(xml.contains("windowLaughterAudioContainer"));
+        assertTrue(xml.contains("labelWindowLaughterAudio"));
+        assertTrue(xml.contains("@string/clip_laughter_audio"));
         assertTrue(xml.contains("clipPhotoStripShort"));
         assertTrue(xml.contains("txtClipLocationDate"));
         assertTrue(xml.contains("windowContextAudioContainerShort"));
+        assertTrue(xml.contains("labelWindowContextAudioShort"));
+        assertTrue(xml.contains("@string/clip_related_context_audio"));
         assertFalse(xml.contains("clipLaughterAudioRow"));
         assertFalse(xml.contains("clipContextAudioRowShort"));
+        assertTrue(
+                xml.indexOf("labelWindowLaughterAudio")
+                        < xml.indexOf("windowLaughterAudioContainer"));
         assertTrue(
                 xml.indexOf("windowLaughterAudioContainer")
                         < xml.indexOf("clipPhotoStripShort"));
@@ -118,6 +125,10 @@ public class AtlasResurfacingWindowPresentationTest {
                         < xml.indexOf("txtClipLocationDate"));
         assertTrue(
                 xml.indexOf("txtClipLocationDate")
+                        < xml.indexOf(
+                        "labelWindowContextAudioShort"));
+        assertTrue(
+                xml.indexOf("labelWindowContextAudioShort")
                         < xml.indexOf(
                         "windowContextAudioContainerShort"));
         assertTrue(

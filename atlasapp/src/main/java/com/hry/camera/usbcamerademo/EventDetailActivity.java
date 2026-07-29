@@ -472,6 +472,9 @@ public class EventDetailActivity extends AppCompatActivity {
                         R.id.clipPhotoStripShortContainer);
         TextView locationDateView =
                 card.findViewById(R.id.txtClipLocationDate);
+        View labelContextAudioShort =
+                card.findViewById(
+                        R.id.labelWindowContextAudioShort);
         LinearLayout contextContainerShort =
                 card.findViewById(
                         R.id.windowContextAudioContainerShort);
@@ -551,6 +554,8 @@ public class EventDetailActivity extends AppCompatActivity {
                 defaultSections.contains(
                         AtlasResurfacingWindowPresentation
                                 .Section.CONTEXT_AUDIO);
+        labelContextAudioShort.setVisibility(
+                shortShowsContext ? View.VISIBLE : View.GONE);
         contextContainerShort.setVisibility(
                 shortShowsContext ? View.VISIBLE : View.GONE);
         if (shortShowsContext) {
