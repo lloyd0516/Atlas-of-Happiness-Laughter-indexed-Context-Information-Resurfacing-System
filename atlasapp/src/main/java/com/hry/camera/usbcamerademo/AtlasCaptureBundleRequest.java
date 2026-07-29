@@ -5,6 +5,8 @@ final class AtlasCaptureBundleRequest {
     final String bundleId;
     final String eventId;
     final int automationBucketId;
+    final int automationBucketClipCount;
+    final int automationBucketDurationSec;
     final long triggerTimeMs;
     final int videoDurationSec;
 
@@ -12,6 +14,8 @@ final class AtlasCaptureBundleRequest {
             String bundleId,
             String eventId,
             int automationBucketId,
+            int automationBucketClipCount,
+            int automationBucketDurationSec,
             long triggerTimeMs,
             int videoDurationSec) {
         if (bundleId == null || bundleId.length() == 0) {
@@ -23,12 +27,21 @@ final class AtlasCaptureBundleRequest {
         if (triggerTimeMs <= 0L) {
             throw new IllegalArgumentException("trigger time invalid");
         }
+        if (automationBucketClipCount <= 0
+                || automationBucketDurationSec <= 0) {
+            throw new IllegalArgumentException(
+                    "automation bucket metadata invalid");
+        }
         if (videoDurationSec <= 0) {
             throw new IllegalArgumentException("video duration invalid");
         }
         this.bundleId = bundleId;
         this.eventId = eventId;
         this.automationBucketId = automationBucketId;
+        this.automationBucketClipCount =
+                automationBucketClipCount;
+        this.automationBucketDurationSec =
+                automationBucketDurationSec;
         this.triggerTimeMs = triggerTimeMs;
         this.videoDurationSec = videoDurationSec;
     }
@@ -36,6 +49,7 @@ final class AtlasCaptureBundleRequest {
     static AtlasCaptureBundleRequest create(
             String eventId,
             int automationBucketId,
+            int automationBucketDurationSec,
             long triggerTimeMs,
             int videoDurationSec) {
         String id = eventId
@@ -47,6 +61,8 @@ final class AtlasCaptureBundleRequest {
                 id,
                 eventId,
                 automationBucketId,
+                AppConfig.AGGREGATION_CLIPS_PER_BUCKET,
+                automationBucketDurationSec,
                 triggerTimeMs,
                 videoDurationSec);
     }

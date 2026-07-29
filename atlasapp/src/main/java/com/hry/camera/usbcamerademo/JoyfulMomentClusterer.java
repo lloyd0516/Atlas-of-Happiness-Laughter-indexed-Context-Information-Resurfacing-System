@@ -85,6 +85,9 @@ public class JoyfulMomentClusterer {
         public final String bundleId;
         public final long bundleTriggerTimeMs;
         public final int bundleMediaIndex;
+        public final int automationBucketId;
+        public final int automationBucketClipCount;
+        public final int automationBucketDurationSec;
 
         public MediaAssetRecord(
                 String path,
@@ -96,6 +99,9 @@ public class JoyfulMomentClusterer {
                     captureTimeMs,
                     null,
                     -1L,
+                    -1,
+                    -1,
+                    -1,
                     -1);
         }
 
@@ -106,12 +112,39 @@ public class JoyfulMomentClusterer {
                 String bundleId,
                 long bundleTriggerTimeMs,
                 int bundleMediaIndex) {
+            this(
+                    path,
+                    contentUri,
+                    captureTimeMs,
+                    bundleId,
+                    bundleTriggerTimeMs,
+                    bundleMediaIndex,
+                    -1,
+                    -1,
+                    -1);
+        }
+
+        public MediaAssetRecord(
+                String path,
+                String contentUri,
+                long captureTimeMs,
+                String bundleId,
+                long bundleTriggerTimeMs,
+                int bundleMediaIndex,
+                int automationBucketId,
+                int automationBucketClipCount,
+                int automationBucketDurationSec) {
             this.path = path;
             this.contentUri = contentUri;
             this.captureTimeMs = captureTimeMs;
             this.bundleId = bundleId;
             this.bundleTriggerTimeMs = bundleTriggerTimeMs;
             this.bundleMediaIndex = bundleMediaIndex;
+            this.automationBucketId = automationBucketId;
+            this.automationBucketClipCount =
+                    automationBucketClipCount;
+            this.automationBucketDurationSec =
+                    automationBucketDurationSec;
         }
 
         JSONObject toJson() throws JSONException {
@@ -129,6 +162,19 @@ public class JoyfulMomentClusterer {
                 json.put(
                         "bundle_media_index",
                         bundleMediaIndex);
+                if (automationBucketId >= 0
+                        && automationBucketClipCount > 0
+                        && automationBucketDurationSec > 0) {
+                    json.put(
+                            "automation_bucket_id",
+                            automationBucketId);
+                    json.put(
+                            "automation_bucket_clip_count",
+                            automationBucketClipCount);
+                    json.put(
+                            "automation_bucket_duration_sec",
+                            automationBucketDurationSec);
+                }
             }
             return json;
         }

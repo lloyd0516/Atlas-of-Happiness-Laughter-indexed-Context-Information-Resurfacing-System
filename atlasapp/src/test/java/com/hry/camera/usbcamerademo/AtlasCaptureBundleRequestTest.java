@@ -13,11 +13,14 @@ public class AtlasCaptureBundleRequestTest {
                 AtlasCaptureBundleRequest.create(
                         "event-7",
                         12,
+                        90,
                         5000L,
                         5);
 
         assertEquals("event-7", bundle.eventId);
         assertEquals(12, bundle.automationBucketId);
+        assertEquals(3, bundle.automationBucketClipCount);
+        assertEquals(90, bundle.automationBucketDurationSec);
         assertEquals(5000L, bundle.triggerTimeMs);
         assertEquals(5, bundle.videoDurationSec);
         assertTrue(bundle.bundleId.contains("event-7"));
@@ -37,6 +40,7 @@ public class AtlasCaptureBundleRequestTest {
         AtlasCaptureBundleRequest.create(
                 "event-7",
                 12,
+                90,
                 5000L,
                 5)
                 .photoRequest(2);

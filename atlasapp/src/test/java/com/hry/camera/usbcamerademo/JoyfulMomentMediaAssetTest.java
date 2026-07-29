@@ -22,7 +22,10 @@ public class JoyfulMomentMediaAssetTest {
                         1500L,
                         "bundle-1",
                         1000L,
-                        0));
+                        0,
+                        12,
+                        3,
+                        90));
         event.videoAssets.add(
                 new JoyfulMomentClusterer.MediaAssetRecord(
                         "/session/event_video_2000.mp4",
@@ -30,7 +33,10 @@ public class JoyfulMomentMediaAssetTest {
                         1100L,
                         "bundle-1",
                         1000L,
-                        0));
+                        0,
+                        12,
+                        3,
+                        90));
 
         JSONObject assets = event.toJson().getJSONObject("assets");
 
@@ -88,5 +94,12 @@ public class JoyfulMomentMediaAssetTest {
                 1000L,
                 json.getLong("bundle_trigger_time_ms"));
         assertEquals(0, json.getInt("bundle_media_index"));
+        assertEquals(12, json.getInt("automation_bucket_id"));
+        assertEquals(
+                3,
+                json.getInt("automation_bucket_clip_count"));
+        assertEquals(
+                90,
+                json.getInt("automation_bucket_duration_sec"));
     }
 }

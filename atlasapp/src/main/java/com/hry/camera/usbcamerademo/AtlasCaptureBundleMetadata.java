@@ -29,5 +29,27 @@ final class AtlasCaptureBundleMetadata {
                 "bundle_trigger_time_ms",
                 triggerTimeMs);
         target.put("bundle_media_index", mediaIndex);
+
+        int bucketId =
+                source.optInt("automation_bucket_id", -1);
+        int bucketClipCount =
+                source.optInt(
+                        "automation_bucket_clip_count",
+                        -1);
+        int bucketDurationSec =
+                source.optInt(
+                        "automation_bucket_duration_sec",
+                        -1);
+        if (bucketId >= 0
+                && bucketClipCount > 0
+                && bucketDurationSec > 0) {
+            target.put("automation_bucket_id", bucketId);
+            target.put(
+                    "automation_bucket_clip_count",
+                    bucketClipCount);
+            target.put(
+                    "automation_bucket_duration_sec",
+                    bucketDurationSec);
+        }
     }
 }

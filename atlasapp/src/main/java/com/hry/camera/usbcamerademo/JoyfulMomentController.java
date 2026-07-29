@@ -881,6 +881,7 @@ public class JoyfulMomentController {
                 AtlasCaptureBundleRequest.create(
                         eventId,
                         automationBucketId,
+                        automationBucketSec,
                         System.currentTimeMillis(),
                         config.triggerVideoDurationSec);
         JSONObject status = new JSONObject();
@@ -1161,7 +1162,16 @@ public class JoyfulMomentController {
                                 request != null
                                         ? request.triggerTimeMs
                                         : -1L,
-                                request != null ? 0 : -1));
+                                request != null ? 0 : -1,
+                                request != null
+                                        ? request.automationBucketId
+                                        : -1,
+                                request != null
+                                        ? request.automationBucketClipCount
+                                        : -1,
+                                request != null
+                                        ? request.automationBucketDurationSec
+                                        : -1));
             }
             appendJson("event_log.jsonl", safeJson(eventRecord));
             writeEventRecord(eventRecord);
@@ -1248,6 +1258,15 @@ public class JoyfulMomentController {
                                     : -1L,
                             request != null
                                     ? request.mediaIndex
+                                    : -1,
+                            request != null
+                                    ? request.bundle.automationBucketId
+                                    : -1,
+                            request != null
+                                    ? request.bundle.automationBucketClipCount
+                                    : -1,
+                            request != null
+                                    ? request.bundle.automationBucketDurationSec
                                     : -1));
             appendJson("event_log.jsonl", safeJson(eventRecord));
             writeEventRecord(eventRecord);
@@ -1371,6 +1390,15 @@ public class JoyfulMomentController {
         json.put(
                 "bundle_trigger_time_ms",
                 request.triggerTimeMs);
+        json.put(
+                "automation_bucket_id",
+                request.automationBucketId);
+        json.put(
+                "automation_bucket_clip_count",
+                request.automationBucketClipCount);
+        json.put(
+                "automation_bucket_duration_sec",
+                request.automationBucketDurationSec);
         if (mediaIndex >= 0) {
             json.put("bundle_media_index", mediaIndex);
         }

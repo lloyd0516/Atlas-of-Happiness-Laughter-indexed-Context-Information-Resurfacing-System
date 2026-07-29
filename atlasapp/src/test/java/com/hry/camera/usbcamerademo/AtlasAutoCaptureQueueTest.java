@@ -12,12 +12,14 @@ public class AtlasAutoCaptureQueueTest {
                 AtlasCaptureBundleRequest.create(
                         "event-a",
                         1,
+                        90,
                         1000L,
                         5);
         AtlasCaptureBundleRequest second =
                 AtlasCaptureBundleRequest.create(
                         "event-b",
                         2,
+                        90,
                         2000L,
                         5);
         AtlasAutoCaptureQueue queue = new AtlasAutoCaptureQueue();
@@ -40,12 +42,14 @@ public class AtlasAutoCaptureQueueTest {
                 AtlasCaptureBundleRequest.create(
                         "event-a",
                         1,
+                        90,
                         1000L,
                         5);
         AtlasCaptureBundleRequest second =
                 AtlasCaptureBundleRequest.create(
                         "event-b",
                         2,
+                        90,
                         2000L,
                         6);
         AtlasAutoCaptureQueue queue = new AtlasAutoCaptureQueue();
