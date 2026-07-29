@@ -924,12 +924,42 @@ public class JoyfulMomentController {
         if ("possible_related_speech_context".equals(label) && !eventRecord.contextClipIds.contains(clipState.clipId)) {
             eventRecord.contextClipIds.add(clipState.clipId);
         }
+        if ("possible_related_speech_context".equals(label)
+                && savedPath != null) {
+            upsertContextAudioRecord(
+                    eventRecord,
+                    clipState,
+                    savedPath);
+        }
         addUniqueAll(eventRecord.detectionIds, clipState.detectionIds);
         if (savedPath != null && !eventRecord.savedClipPaths.contains(savedPath)) {
             eventRecord.savedClipPaths.add(savedPath);
         }
         appendJson("event_log.jsonl", safeJson(eventRecord));
         writeEventRecord(eventRecord);
+    }
+
+    private void upsertContextAudioRecord(
+            JoyfulMomentClusterer.EventRecord eventRecord,
+            ClipState clipState,
+            String savedPath) {
+        for (int i = eventRecord.contextAudioRecords.size() - 1;
+                i >= 0;
+                i--) {
+            AtlasContextAudioRecord record =
+                    eventRecord.contextAudioRecords.get(i);
+            if (record.clipId == clipState.clipId
+                    || savedPath.equals(record.path)) {
+                eventRecord.contextAudioRecords.remove(i);
+            }
+        }
+        eventRecord.contextAudioRecords.add(
+                new AtlasContextAudioRecord(
+                        clipState.clipId,
+                        clipState.startSec,
+                        clipState.endSec,
+                        savedPath,
+                        clipState.relatedLaughterClipIds));
     }
 
     private JoyfulMomentClusterer.EventRecord findEventForClip(ClipState clipState) {

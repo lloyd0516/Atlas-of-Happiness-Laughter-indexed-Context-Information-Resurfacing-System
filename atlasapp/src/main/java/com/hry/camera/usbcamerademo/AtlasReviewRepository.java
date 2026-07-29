@@ -1052,6 +1052,8 @@ public class AtlasReviewRepository {
         JSONArray savedClipPaths = raw.optJSONArray("saved_clip_paths");
         JSONArray laughterClipIds = raw.optJSONArray("laughter_clip_ids");
         JSONArray contextClipIds = raw.optJSONArray("context_clip_ids");
+        JSONArray contextAudioRecords =
+                raw.optJSONArray("context_audio_records");
         HashMap<String, JSONObject> detections = loadDetectionMap(sessionDir);
         if (savedClipPaths != null) {
             for (int i = 0; i < savedClipPaths.length(); i++) {
@@ -1066,6 +1068,11 @@ public class AtlasReviewRepository {
                 clip.put("timestamp", isoFormat.format(new Date(startMs)));
                 if (containsInt(contextClipIds, clipId) || path.contains("possible_related_speech_context")) {
                     clip.put("type", "possible_related_speech_context");
+                    AtlasContextAudioRecord.copyMatchingRecord(
+                            contextAudioRecords,
+                            clipId,
+                            path,
+                            clip);
                 } else if (containsInt(laughterClipIds, clipId) || path.contains("laughter")) {
                     clip.put("type", "laughter");
                 } else {
@@ -1110,6 +1117,11 @@ public class AtlasReviewRepository {
                         clip.put("type", "possible_related_speech_context");
                         clip.put("path", savedPath);
                         clip.put("linked_period_ids", copyArray(period.optJSONArray("related_laughter_period_ids")));
+                        AtlasContextAudioRecord.copyMatchingRecord(
+                                contextAudioRecords,
+                                period.optInt("clip_id", parseClipId(savedPath)),
+                                savedPath,
+                                clip);
                     }
                     if (clip.length() > 0) {
                         audioClips.put(clip);
@@ -1328,6 +1340,8 @@ public class AtlasReviewRepository {
         }
         JSONArray laughterClipIds = event.optJSONArray("laughter_clip_ids");
         JSONArray contextClipIds = event.optJSONArray("context_clip_ids");
+        JSONArray contextAudioRecords =
+                event.optJSONArray("context_audio_records");
         long startMs = event.optLong("start_time_ms", event.optLong("device_start_ms", System.currentTimeMillis()));
         for (int i = 0; i < savedClipPaths.length(); i++) {
             String path = savedClipPaths.optString(i, null);
@@ -1341,6 +1355,11 @@ public class AtlasReviewRepository {
             clip.put("timestamp", isoFormat.format(new Date(startMs)));
             if (containsInt(contextClipIds, clipId) || path.contains("possible_related_speech_context")) {
                 clip.put("type", "possible_related_speech_context");
+                AtlasContextAudioRecord.copyMatchingRecord(
+                        contextAudioRecords,
+                        clipId,
+                        path,
+                        clip);
             } else if (containsInt(laughterClipIds, clipId) || path.contains("laughter")) {
                 clip.put("type", "laughter");
             } else {
@@ -1355,6 +1374,32 @@ public class AtlasReviewRepository {
         meta.put("session_id", sessionDir.getName());
         meta.put("session_dir", sessionDir.getAbsolutePath());
         meta.put("event_file_path", eventFile.getAbsolutePath());
+        JSONObject summary =
+                readJson(new File(sessionDir, "summary.json"));
+        if (summary == null) {
+            return;
+        }
+        long sessionStartMs =
+                summary.optLong("session_start_ms", -1L);
+        if (sessionStartMs > 0L) {
+            meta.put("session_start_ms", sessionStartMs);
+        }
+        JSONObject config = summary.optJSONObject("config");
+        if (config == null) {
+            return;
+        }
+        int clipDurationSec =
+                config.optInt("clip_duration_s", -1);
+        int contextNeighborClips =
+                config.optInt("context_neighbor_clips", -1);
+        if (clipDurationSec > 0) {
+            meta.put("clip_duration_sec", clipDurationSec);
+        }
+        if (contextNeighborClips >= 0) {
+            meta.put(
+                    "context_neighbor_clips",
+                    contextNeighborClips);
+        }
     }
 
     private HashMap<String, JSONObject> loadPeriodMap(File sessionDir) {

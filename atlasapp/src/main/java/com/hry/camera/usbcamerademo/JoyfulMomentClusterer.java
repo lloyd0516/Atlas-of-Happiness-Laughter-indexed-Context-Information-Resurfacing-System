@@ -193,6 +193,8 @@ public class JoyfulMomentClusterer {
         public boolean finalized;
         public final List<Integer> laughterClipIds = new ArrayList<>();
         public final List<Integer> contextClipIds = new ArrayList<>();
+        public final List<AtlasContextAudioRecord> contextAudioRecords =
+                new ArrayList<>();
         public final List<String> detectionIds = new ArrayList<>();
         public final List<String> savedClipPaths = new ArrayList<>();
         public String videoPath;
@@ -219,6 +221,11 @@ public class JoyfulMomentClusterer {
             json.put("aggregation_gap_threshold_sec", aggregationGapThresholdSec);
             json.put("laughter_clip_ids", new JSONArray(laughterClipIds));
             json.put("context_clip_ids", new JSONArray(contextClipIds));
+            JSONArray contextAudio = new JSONArray();
+            for (AtlasContextAudioRecord record : contextAudioRecords) {
+                contextAudio.put(record.toJson());
+            }
+            json.put("context_audio_records", contextAudio);
             json.put("detection_ids", new JSONArray(detectionIds));
             json.put("saved_clip_paths", new JSONArray(savedClipPaths));
 
