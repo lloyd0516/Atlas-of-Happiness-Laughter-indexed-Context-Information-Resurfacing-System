@@ -22,7 +22,15 @@ public final class AppConfig {
     public static final int DEFAULT_LAUGHTER_CONFIDENCE_THRESHOLD_PCT = 70;
     public static final int DEFAULT_LAUGHTER_MIN_DURATION_MS = 0;
     public static final int DEFAULT_TRIGGER_VIDEO_DURATION_SEC = 5;
-    public static final int DEFAULT_TRIGGER_PHOTO_COUNT = 2;
+
+    // ---- Fixed automatic capture bundle ----
+    public static final int AUTO_CAPTURE_PHOTOS_PER_BUNDLE = 2;
+    public static final int AUTO_CAPTURE_VIDEOS_PER_BUNDLE = 1;
+    public static final long AUTO_CAPTURE_PHOTO_DELAY_1_MS = 1500L;
+    public static final long AUTO_CAPTURE_PHOTO_DELAY_2_MS = 3500L;
+    @Deprecated
+    public static final int DEFAULT_TRIGGER_PHOTO_COUNT =
+            AUTO_CAPTURE_PHOTOS_PER_BUNDLE;
 
     // ---- "Frequent" preset overrides ----
     public static final int FREQUENT_CHUNK_MS = 150;
@@ -30,7 +38,6 @@ public final class AppConfig {
     public static final int FREQUENT_CONTEXT_NEIGHBOR_CLIPS = 3;
     public static final int FREQUENT_EVENT_WINDOW_SEC = 480;
     public static final int FREQUENT_TRIGGER_VIDEO_DURATION_SEC = 6;
-    public static final int FREQUENT_TRIGGER_PHOTO_COUNT = 3;
 
     // ---- "Sparse" preset overrides ----
     public static final int SPARSE_CHUNK_MS = 250;
@@ -38,7 +45,6 @@ public final class AppConfig {
     public static final int SPARSE_CONTEXT_NEIGHBOR_CLIPS = 1;
     public static final int SPARSE_EVENT_WINDOW_SEC = 900;
     public static final int SPARSE_TRIGGER_VIDEO_DURATION_SEC = 4;
-    public static final int SPARSE_TRIGGER_PHOTO_COUNT = 1;
 
     /** Padding applied around a laughter detection when extracting the related audio window. */
     public static final double LAUGHTER_AUDIO_PADDING_SEC = 2.5;
@@ -62,7 +68,11 @@ public final class AppConfig {
     // ---- Laughter clip media association ----
     /** Each clip may use media captured within this symmetric time window. */
     public static final long CLIP_MEDIA_MATCH_WINDOW_MS = 90L * 1000L;
-    /** Photos and videos are matched independently, with this per-type maximum. */
+    /** Time window used only to infer capture bundles in legacy records. */
+    public static final long LEGACY_CAPTURE_BUNDLE_GROUP_WINDOW_MS =
+            15L * 1000L;
+    /** Temporary source-compatibility alias removed with bundle-aware detail rendering. */
+    @Deprecated
     public static final int CLIP_MEDIA_MAX_PER_TYPE = 1;
 
     /**
@@ -115,8 +125,14 @@ public final class AppConfig {
     /** Window used to backfill missing context from a nearby already-resolved event. */
     public static final long CONTEXT_NEARBY_BACKFILL_WINDOW_MS = 6L * 60L * 60L * 1000L;
 
-    // ---- Post-recording supplement flow ----
-    /** Auto-photo trigger delays after a laughter-labeled clip is finalized. */
-    public static final long AUTO_PHOTO_TRIGGER_DELAY_1_MS = 1500L;
-    public static final long AUTO_PHOTO_TRIGGER_DELAY_2_MS = 3500L;
+    public static long autoCapturePhotoDelayMs(int mediaIndex) {
+        if (mediaIndex == 0) {
+            return AUTO_CAPTURE_PHOTO_DELAY_1_MS;
+        }
+        if (mediaIndex == 1) {
+            return AUTO_CAPTURE_PHOTO_DELAY_2_MS;
+        }
+        throw new IllegalArgumentException(
+                "Unsupported photo media index: " + mediaIndex);
+    }
 }

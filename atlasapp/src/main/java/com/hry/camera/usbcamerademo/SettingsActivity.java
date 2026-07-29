@@ -137,7 +137,6 @@ public class SettingsActivity extends AppCompatActivity {
         addSlider("laughter_confidence_threshold_pct", R.string.config_laughter_confidence, R.string.config_laughter_confidence_desc, 0, 100, 5);
         addSlider("laughter_min_duration_ms", R.string.config_laughter_min_duration, R.string.config_laughter_min_duration_desc, 0, 5000, 100);
         addSlider("trigger_video_duration_s", R.string.config_trigger_video, R.string.config_trigger_video_desc, 1, 30, 1);
-        addSlider("trigger_photo_count", R.string.config_trigger_photo, R.string.config_trigger_photo_desc, 0, 6, 1);
         addSlider("speechmatics_max_delay_s", R.string.config_max_delay, R.string.config_max_delay_desc, 0, 10, 1);
         addSlider("camera_brightness", R.string.settings_camera, R.string.settings_camera_caption, 0, 100, 1);
     }
@@ -218,7 +217,6 @@ public class SettingsActivity extends AppCompatActivity {
         setSliderValue("laughter_confidence_threshold_pct", config.laughterConfidenceThresholdPct);
         setSliderValue("laughter_min_duration_ms", config.laughterMinDurationMs);
         setSliderValue("trigger_video_duration_s", config.triggerVideoDurationSec);
-        setSliderValue("trigger_photo_count", config.triggerPhotoCount);
         setSliderValue("speechmatics_max_delay_s", config.speechmaticsMaxDelaySec == null ? 0 : config.speechmaticsMaxDelaySec);
         setSliderValue("camera_brightness", repository.getCameraBrightnessPercent());
 
@@ -285,7 +283,8 @@ public class SettingsActivity extends AppCompatActivity {
         config.laughterConfidenceThresholdPct = getSliderValue("laughter_confidence_threshold_pct");
         config.laughterMinDurationMs = getSliderValue("laughter_min_duration_ms");
         config.triggerVideoDurationSec = getSliderValue("trigger_video_duration_s");
-        config.triggerPhotoCount = getSliderValue("trigger_photo_count");
+        config.triggerPhotoCount =
+                AppConfig.AUTO_CAPTURE_PHOTOS_PER_BUNDLE;
         config.speechmaticsMaxDelaySec = getSliderValue("speechmatics_max_delay_s");
         if (config.speechmaticsMaxDelaySec != null && config.speechmaticsMaxDelaySec <= 0) {
             config.speechmaticsMaxDelaySec = null;

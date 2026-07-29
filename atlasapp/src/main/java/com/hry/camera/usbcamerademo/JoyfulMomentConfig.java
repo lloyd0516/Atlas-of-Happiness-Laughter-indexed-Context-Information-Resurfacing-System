@@ -35,7 +35,8 @@ public class JoyfulMomentConfig {
     public int laughterConfidenceThresholdPct = AppConfig.DEFAULT_LAUGHTER_CONFIDENCE_THRESHOLD_PCT;
     public int laughterMinDurationMs = AppConfig.DEFAULT_LAUGHTER_MIN_DURATION_MS;
     public int triggerVideoDurationSec = AppConfig.DEFAULT_TRIGGER_VIDEO_DURATION_SEC;
-    public int triggerPhotoCount = AppConfig.DEFAULT_TRIGGER_PHOTO_COUNT;
+    public int triggerPhotoCount =
+            AppConfig.AUTO_CAPTURE_PHOTOS_PER_BUNDLE;
     public String speechmaticsLanguage = "en";
     public String speechmaticsOperatingPoint = "enhanced";
     public Integer speechmaticsMaxDelaySec = null;
@@ -51,14 +52,12 @@ public class JoyfulMomentConfig {
             config.contextNeighborClips = AppConfig.FREQUENT_CONTEXT_NEIGHBOR_CLIPS;
             config.eventWindowSec = AppConfig.FREQUENT_EVENT_WINDOW_SEC;
             config.triggerVideoDurationSec = AppConfig.FREQUENT_TRIGGER_VIDEO_DURATION_SEC;
-            config.triggerPhotoCount = AppConfig.FREQUENT_TRIGGER_PHOTO_COUNT;
         } else if (LEVEL_SPARSE.equals(level)) {
             config.chunkMs = AppConfig.SPARSE_CHUNK_MS;
             config.clipDurationSec = AppConfig.SPARSE_CLIP_DURATION_SEC;
             config.contextNeighborClips = AppConfig.SPARSE_CONTEXT_NEIGHBOR_CLIPS;
             config.eventWindowSec = AppConfig.SPARSE_EVENT_WINDOW_SEC;
             config.triggerVideoDurationSec = AppConfig.SPARSE_TRIGGER_VIDEO_DURATION_SEC;
-            config.triggerPhotoCount = AppConfig.SPARSE_TRIGGER_PHOTO_COUNT;
         } else if (LEVEL_CUSTOM.equals(level)) {
             config.detectionLevel = LEVEL_CUSTOM;
         }
@@ -74,7 +73,9 @@ public class JoyfulMomentConfig {
         json.put("laughter_confidence_threshold_pct", laughterConfidenceThresholdPct);
         json.put("laughter_min_duration_ms", laughterMinDurationMs);
         json.put("trigger_video_duration_s", triggerVideoDurationSec);
-        json.put("trigger_photo_count", triggerPhotoCount);
+        json.put(
+                "trigger_photo_count",
+                AppConfig.AUTO_CAPTURE_PHOTOS_PER_BUNDLE);
         json.put("detection_level", detectionLevel);
         json.put("speechmatics_language", speechmaticsLanguage);
         json.put("speechmatics_operating_point", speechmaticsOperatingPoint);
@@ -101,7 +102,13 @@ public class JoyfulMomentConfig {
         config.laughterConfidenceThresholdPct = optIntAny(json, config.laughterConfidenceThresholdPct, "laughter_confidence_threshold_pct", "laughterConfidenceThresholdPct");
         config.laughterMinDurationMs = optIntAny(json, config.laughterMinDurationMs, "laughter_min_duration_ms", "laughterMinDurationMs");
         config.triggerVideoDurationSec = optIntAny(json, config.triggerVideoDurationSec, "trigger_video_duration_s", "triggerVideoDurationSec");
-        config.triggerPhotoCount = optIntAny(json, config.triggerPhotoCount, "trigger_photo_count", "triggerPhotoCount");
+        optIntAny(
+                json,
+                AppConfig.AUTO_CAPTURE_PHOTOS_PER_BUNDLE,
+                "trigger_photo_count",
+                "triggerPhotoCount");
+        config.triggerPhotoCount =
+                AppConfig.AUTO_CAPTURE_PHOTOS_PER_BUNDLE;
         config.speechmaticsLanguage = optStringAny(json, config.speechmaticsLanguage, "speechmatics_language", "speechmaticsLanguage");
         config.speechmaticsOperatingPoint = optStringAny(json, config.speechmaticsOperatingPoint, "speechmatics_operating_point", "speechmaticsOperatingPoint");
         config.outputRoot = optStringAny(json, config.outputRoot, "output_root", "outputRoot");
