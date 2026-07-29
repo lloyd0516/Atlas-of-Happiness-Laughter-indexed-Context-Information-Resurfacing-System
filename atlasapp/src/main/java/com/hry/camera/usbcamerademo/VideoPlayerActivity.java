@@ -143,12 +143,9 @@ public class VideoPlayerActivity extends AppCompatActivity {
                         playbackCompleted = true;
                         logPlayback(
                                 ResearchEventNames.MEDIA_PLAY_COMPLETED,
-                                ResearchInteractionLogger.properties(
-                                        "position_ms",
+                                ResearchLogProperties.mediaPlayCompleted(
                                         videoView.getDuration(),
-                                        "duration_ms",
                                         videoView.getDuration(),
-                                        "played_duration_ms",
                                         playedDurationMs));
                     }
                 });

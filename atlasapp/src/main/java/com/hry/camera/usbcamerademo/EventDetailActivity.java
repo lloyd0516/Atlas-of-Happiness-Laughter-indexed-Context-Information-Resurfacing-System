@@ -1352,12 +1352,9 @@ public class EventDetailActivity extends AppCompatActivity {
                                 ResearchEventNames.MEDIA_PLAY_COMPLETED,
                                 originalPath,
                                 mediaType,
-                                ResearchInteractionLogger.properties(
-                                        "position_ms",
+                                ResearchLogProperties.mediaPlayCompleted(
                                         completedPlayer.getDuration(),
-                                        "duration_ms",
                                         completedPlayer.getDuration(),
-                                        "played_duration_ms",
                                         playedDurationMs));
                         finishAudioPlayback(
                                 AtlasAudioPlaybackState.Event.COMPLETED,
