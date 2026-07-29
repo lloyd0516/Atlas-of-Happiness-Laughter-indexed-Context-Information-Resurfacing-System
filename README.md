@@ -28,7 +28,10 @@ system**。地图只是用户回顾历史 moment 的一种入口。
 - 用户决定删除、保留并允许回顾建议（`save_push`），或保留但不参与通知
   （`save_no_push`）。
 - 回顾详情页只在 App 播放时增强过小的 laughter audio；原始研究 WAV 永不改写。
-- 每个 laughter clip 只展示其前后 90 秒内、时间最近的一组固定 2 张照片 + 1 段视频采集 bundle。
+- 自动采集与回顾详情使用同一套 session 对齐的 `clip × 3` 窗口；默认 clip 为
+  30 秒，因此默认窗口为 90 秒。
+- 每个含 laughter 的窗口只展示一次对应的固定 2 张照片 + 1 段视频采集 bundle；
+  同一窗口内的多段 laughter 并列播放，媒体和 longer audio 不跨窗口复用。
 - 数据以本机 JSON 与媒体文件为 source of truth；当前没有账户、云同步或跨设备恢复。
 
 ## 核心用户流程
@@ -45,8 +48,9 @@ system**。地图只是用户回顾历史 moment 的一种入口。
    - **删除**：永久删除事件 JSON 与 App 管理的关联媒体；
    - **保存，并允许推送回顾建议**：写入 `save_push`；
    - **保存，但不推送回顾建议**：写入 `save_no_push`。
-7. 已保存 moment 可在地图、日历和时间线中查看，并可继续编辑或删除；详情页按 clip
-   时间关联附近媒体，过小的 laughter audio 会生成仅供播放的增强缓存。
+7. 已保存 moment 可在地图、日历和时间线中查看，并可继续编辑或删除；详情页按
+   session 对齐的 `clip × 3` 窗口聚合 laughter、媒体和 longer audio，过小的
+   laughter audio 会生成仅供播放的增强缓存。
 8. 只有 `save_push` moment 能进入 Short、Long 和 Location resurfacing。
 
 ## 主要页面与功能
@@ -59,7 +63,7 @@ system**。地图只是用户回顾历史 moment 的一种入口。
 | 记录后选择 | `SupplementPickerActivity` | 列出刚结束 session 中捕捉到的 laughter events |
 | 主观补充 | `EventSupplementActivity` | 三个可选情境问题，以及 delete / `save_push` / `save_no_push` 决策 |
 | 回顾 | `ReviewShellActivity` | Map、Calendar、Timeline 三种浏览方式；接收地点通知的地图聚焦参数 |
-| Moment 详情 | `EventDetailActivity` | Short/Long reconstruction；播放增强后的过小笑声；按 clip 时间查看附近媒体；编辑补充内容；永久删除事件 |
+| Moment 详情 | `EventDetailActivity` | Short/Long reconstruction；按 `clip × 3` 窗口并列播放多段 laughter、查看单一 2+1 媒体 bundle 与 longer audio；编辑补充内容；永久删除事件 |
 | 我的 | `MeActivity` | 系统/中文/英文切换；独立控制“每日回顾推送”和“同地点提醒”，两项默认开启 |
 | 开发者设置 | `SettingsActivity` | 检测等级、Speechmatics、采集、情境 API 和摄像头参数 |
 | 日志 | `LogViewerActivity` | 查看 session、Speechmatics、检测和 App 诊断日志 |
@@ -96,9 +100,10 @@ flowchart TD
 - **读取与编辑**：`AtlasReviewRepository` 统一归一化新旧事件格式，并负责事件及媒体删除。
 - **回顾与提醒**：`ReviewShellActivity`、`EventDetailActivity`、
   `AtlasResurfacingManager` 及 Daily/Location scheduler、receiver、policy classes。
-- **播放与媒体关联**：`AtlasLaughterPlaybackPreparer` 生成 App cache 播放副本；
-  `AtlasMediaCaptureTimeResolver` 兼容新旧媒体时间；`AtlasClipMediaMatcher` 完成
-  clip 与固定 2 张照片 + 1 段视频采集 bundle 的窗口匹配。
+- **播放与窗口聚合**：`AtlasLaughterPlaybackPreparer` 生成 App cache 播放副本；
+  `AtlasMediaCaptureTimeResolver` 兼容新旧媒体时间；`AtlasClipMediaMatcher` 恢复
+  固定 2 张照片 + 1 段视频 bundle；`AtlasResurfacingWindowAggregator` 按
+  `AtlasAggregationBucketPolicy` 的 `clip × 3` 边界完成单一归属。
 
 ## 输入、处理与输出
 
@@ -106,10 +111,10 @@ flowchart TD
 | --- | --- | --- | --- |
 | 实时检测 | 16 kHz 单声道 PCM、Speechmatics Key 与网络 | WebSocket 流式识别；按置信度、时长阈值接收 laughter event | `speechmatics_raw.jsonl`、检测记录 |
 | Moment 聚合 | laughter detection、相邻 audio clips | 按 event gap 聚合；保存 laughter 与可能相关语音窗口 | event JSON、WAV clips |
-| 自动媒体 | USB 视频流、触发策略 | 每次通过 clip bucket 限频后创建一个固定 2 张照片 + 1 段视频 bundle，并记录 bundle 身份与实际拍摄时间 | `captured_media/<event_id>/...`、`bundle_id`、`capture_time_ms` |
+| 自动媒体 | USB 视频流、触发策略 | 每个 `clip × 3` bucket 最多创建一个固定 2 张照片 + 1 段视频 bundle，并记录 bundle 与 bucket 身份 | `captured_media/<event_id>/...`、`bundle_id`、`automation_bucket_*`、`capture_time_ms` |
 | 自动情境 | GPS fix、AMap Key | GPS/WGS84 到 AMap 坐标、逆地理编码、天气查询；失败时重试或邻近事件回填 | `derived_context.gps`、`derived_context.weather` |
 | 用户补充 | 文字、语音、照片、社交情境、保存决策 | 写入或编辑 `user_generated` 与 `save_decision` | JSON 更新、`user_generated/<event_id>/...` |
-| 回顾 | 本地 JSON 与媒体 | 归一化、筛选；按 clip 的 ±90 s 窗口关联媒体；为过小 laughter audio 准备播放缓存 | 页面卡片、Short/Long 详情、App cache 音频副本 |
+| 回顾 | 本地 JSON 与媒体 | 按历史 session 的 clip 时长构建 `clip × 3` 窗口；聚合多段 laughter、单一媒体 bundle 与不复用的 context audio；为过小 laughter audio 准备播放缓存 | 窗口卡片、Short/Long 详情、App cache 音频副本 |
 | Resurfacing | `save_push` moments、时间、GPS、偏好和权限 | Daily 候选排序或 Location proximity policy | Android 本地通知与页面跳转 |
 
 ## Moment 数据结构
@@ -203,18 +208,23 @@ flowchart TD
 和
 [`AtlasLaughterPlaybackPreparer.java`](atlasapp/src/main/java/com/hry/camera/usbcamerademo/AtlasLaughterPlaybackPreparer.java)。
 
-### Laughter clip 与照片、视频关联
+### `clip × 3` 回顾窗口与媒体关联
 
-详情页以每个 laughter clip 的 `device_time_ms` 为中心，在
-`[T - 90 s, T + 90 s]` 中选择绝对时间差最近的一个采集 bundle：
+采集和详情展示共享从 session 起点开始的固定 bucket 边界。窗口时长不是硬编码
+90 秒，而是 `sessionClipDurationSec × 3`；默认 `30 × 3 = 90` 秒。只有包含至少
+一段 laughter 的 bucket 才生成回顾卡片：
 
-- 一个 bundle 固定对应 2 张照片和 1 段视频；
-- 恰好相差 90 秒仍可关联，超过 90 秒则排除；
-- 同一 bundle 允许被多个相邻 clip 共用；
-- bundle 部分采集失败时只展示成功项，不从其他 bundle 补齐；
-- 路径失效或时间未知的媒体不参与匹配；
-- bundle 内没有可访问媒体时隐藏整个媒体折叠项，不使用远距离媒体补位；
-- Short 和 Long 详情使用同一匹配规则。
+- 同一窗口内可包含多段 laughter audio，并按时间顺序分别提供播放、波形和进度；
+- 左侧时长徽标是窗口内 laughter event 区间去重后的总时长，不是补齐后 WAV 时长；
+- 每个 bucket 最多展示一个自动采集 bundle，bundle 固定最多 2 张照片和 1 段视频；
+- bundle 部分采集失败时只展示成功项，不从其他 bundle 补齐，也不复制到相邻窗口；
+- `possible_related_speech_context` 优先跟随显式关联的 laughter，旧数据才按 clip
+  距离回退，并且只显示一次；不会生成只有 context、没有 laughter 的孤立卡片；
+- 路径失效、session 时间无法可信恢复的内容不会被强行归属；
+- Short 默认顺序为 laughter → 媒体 → 日期/地点 → longer audio；折叠区为
+  Social context 与 User summary；
+- Long 默认顺序为 laughter → 日期/地点；同一个折叠区依次包含媒体、
+  longer audio、Social context 与 User summary。
 
 新采集数据保存明确的 `bundle_id`、`bundle_trigger_time_ms`、
 `bundle_media_index` 和 `capture_time_ms`。读取旧 event 时，时间恢复优先使用已有字段，
@@ -283,7 +293,9 @@ Location reminder 先将符合条件的历史 GPS 点聚合为稳定地点，再
 | [`JoyfulMomentController.java`](atlasapp/src/main/java/com/hry/camera/usbcamerademo/JoyfulMomentController.java) | 检测、聚合、自动媒体、情境解析的协调器 |
 | [`AtlasReviewRepository.java`](atlasapp/src/main/java/com/hry/camera/usbcamerademo/AtlasReviewRepository.java) | 事件读取、格式归一化、编辑、删除 |
 | [`AtlasLaughterPlaybackPreparer.java`](atlasapp/src/main/java/com/hry/camera/usbcamerademo/AtlasLaughterPlaybackPreparer.java) | PCM16 WAV 响度分析、正增益和 App cache 播放副本 |
-| [`AtlasClipMediaMatcher.java`](atlasapp/src/main/java/com/hry/camera/usbcamerademo/AtlasClipMediaMatcher.java) | 每个 clip 的 ±90 秒最近 2+1 采集 bundle 选择及旧数据推断 |
+| [`AtlasAggregationBucketPolicy.java`](atlasapp/src/main/java/com/hry/camera/usbcamerademo/AtlasAggregationBucketPolicy.java) | 采集与展示共用的 session 对齐 `clip × 3` 窗口边界 |
+| [`AtlasClipMediaMatcher.java`](atlasapp/src/main/java/com/hry/camera/usbcamerademo/AtlasClipMediaMatcher.java) | 收集显式 2+1 bundle，并按 15 秒窗口兼容旧媒体分组 |
+| [`AtlasResurfacingWindowAggregator.java`](atlasapp/src/main/java/com/hry/camera/usbcamerademo/AtlasResurfacingWindowAggregator.java) | 多 laughter、单一媒体 bundle 与 context audio 的确定性窗口归属 |
 | [`AtlasMediaCaptureTimeResolver.java`](atlasapp/src/main/java/com/hry/camera/usbcamerademo/AtlasMediaCaptureTimeResolver.java) | 新旧媒体可信采集时间解析 |
 | [`AtlasResurfacingManager.java`](atlasapp/src/main/java/com/hry/camera/usbcamerademo/AtlasResurfacingManager.java) | Daily 与 Location reminder 的统一 reconcile 入口 |
 | [`AtlasResurfacingSelector.java`](atlasapp/src/main/java/com/hry/camera/usbcamerademo/AtlasResurfacingSelector.java) | `save_push` 资格与两段式候选排序 |
@@ -424,22 +436,22 @@ Android Studio 中选择 `atlasapp` configuration 和真机后即可运行。没
 
 ## 获取与安装 APK
 
-本轮 `fj_ver` 合作测试 APK 的本地路径：
+本轮 `fj_aggregate_ver` 合作测试 APK 的本地路径：
 
-[`artifacts/Atlas-of-Happiness-2.0-laughter-ripples-fj_ver-debug.apk`](artifacts/Atlas-of-Happiness-2.0-laughter-ripples-fj_ver-debug.apk)
+[`artifacts/Atlas-of-Happiness-2.0-three-clip-aggregate-fj_aggregate_ver-debug.apk`](artifacts/Atlas-of-Happiness-2.0-three-clip-aggregate-fj_aggregate_ver-debug.apk)
 
 | 项目 | 值 |
 | --- | --- |
 | Build type | Debug 研究/测试包，不是正式 Release |
 | Package | `com.hry.camera.atlasofhappiness` |
 | 文件大小 | 约 4.4 MB |
-| Source branch / commit | `fj_ver` / `3e45191` |
-| SHA-256 | `058ba500c216e9c277b645d6eabe9a7608b66d676f62349c97263874d6b8e411` |
+| Source branch / commit | `fj_aggregate_ver` / `9ca5222` |
+| SHA-256 | `47c168d5b86acb1878ab847b33812409dd72a0d27e437300a4140be0d0fcf267` |
 
 > [!NOTE]
 > 该 APK 当前位于维护者工作区的未跟踪 `artifacts/` 目录，没有随源码 push 到
 > GitHub。因此远程协作者不能直接从仓库下载这个文件；请向维护者获取 APK，或 clone
-> `fj_ver` 后按“构建与运行”自行生成。若需要稳定公开下载，应另行上传到 GitHub Release。
+> `fj_aggregate_ver` 后按“构建与运行”自行生成。若需要稳定公开下载，应另行上传到 GitHub Release。
 
 获得 APK 后在手机安装：
 
@@ -452,7 +464,7 @@ Android Studio 中选择 `atlasapp` configuration 和真机后即可运行。没
 
 ```sh
 adb devices
-adb install -r artifacts/Atlas-of-Happiness-2.0-laughter-ripples-fj_ver-debug.apk
+adb install -r artifacts/Atlas-of-Happiness-2.0-three-clip-aggregate-fj_aggregate_ver-debug.apk
 ```
 
 如果设备上已有不同签名、但 package 相同的版本，Android 会拒绝覆盖。卸载旧版本会清除
@@ -487,7 +499,10 @@ sh gradlew :atlasapp:testDebugUnitTest
 
 - `AtlasLaughterGainPolicyTest`：只增不减、最大增益和输出响度顺序；
 - `AtlasLaughterPlaybackPreparerTest`：PCM16 WAV 分析、缓存、原文件不变、峰值保护与安全回退；
-- `AtlasClipMediaMatcherTest`：显式 2+1 bundle、±90 秒边界、不跨组补齐、复用、排序和旧数据 15 秒推断；
+- `AtlasAggregationBucketPolicyTest`：不同 clip 时长、精确窗口边界与非法输入；
+- `AtlasClipMediaMatcherTest`：显式 2+1 bundle 收集、部分 bundle、稳定排序和旧数据 15 秒推断；
+- `AtlasResurfacingWindowAggregatorTest`：多 laughter 聚合、时长并集、媒体/context 单一归属及边界；
+- `AtlasResurfacingWindowPresentationTest`：Short/Long 默认与折叠顺序、动态音频容器布局契约；
 - `AtlasMediaCaptureTimeResolverTest` / `JoyfulMomentMediaAssetTest`：新媒体时间持久化与旧时间恢复；
 - `ResearchLogPropertiesTest`：播放完成时长别名、首次/更新决策和相同选择 no-op；
 - `AtlasResurfacingSelectorTest`：`save_push` 资格、补充优先、媒体数量与确定性排序；
@@ -498,7 +513,7 @@ sh gradlew :atlasapp:testDebugUnitTest
 - `ResearchJsonlWriterTest` / `ResearchLogRecordTest`：研究日志落盘、重试与 schema envelope；
 - `ResearchSessionTimingTest` / `ResearchPlaybackTrackerTest`：session 与实际媒体播放时长。
 
-当前 `fj_ver` 的完整 debug JVM 测试共 `77` 项；最近一次完整运行与
+当前 `fj_aggregate_ver` 的完整 debug JVM 测试共 `121` 项；最近一次完整运行与
 `:atlasapp:assembleDebug --rerun-tasks` 均通过。
 
 单元测试不能替代真机验收。涉及 USB、系统闹钟、通知权限、后台 GPS、地图 deep link
@@ -536,10 +551,11 @@ App 只对低于 `-24 dBFS` 的 laughter clip 做部分正增益，最大为 `+1
 让极小声音更容易听见，同时保留“自己较大、环境较小”等原始相对特征，而不是把所有
 片段拉到同一音量。非 PCM16、损坏或无法建立缓存的 WAV 会安全回退到原文件。
 
-### 为什么某个笑声片段下面没有照片或视频？
+### 为什么某个回顾窗口没有照片或视频？
 
-每类媒体必须位于该 clip 前后 90 秒内，且文件当前可访问。窗口内没有合格照片或视频时，
-对应媒体不会显示，也不会拿时间上很远的 event 媒体替代。
+媒体 bundle 必须能够可信归属到该 session 的同一个 `clip × 3` bucket，且文件当前
+可访问。该窗口没有合格 bundle 时媒体区域不会显示，也不会拿相邻窗口或时间上很远的
+event 媒体替代。
 
 ### 当前产品限制
 
