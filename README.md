@@ -215,6 +215,8 @@ flowchart TD
 一段 laughter 的 bucket 才生成回顾卡片：
 
 - 同一窗口内可包含多段 laughter audio，并按时间顺序分别提供播放、波形和进度；
+- 回顾卡片把两类录音明确标为“笑声音频”和“相关上下文音频”，避免向被试暴露
+  `laughter`、`possible_related_speech_context` 等内部类型名；
 - 左侧时长徽标是窗口内 laughter event 区间去重后的总时长，不是补齐后 WAV 时长；
 - 每个 bucket 最多展示一个自动采集 bundle，bundle 固定最多 2 张照片和 1 段视频；
 - bundle 部分采集失败时只展示成功项，不从其他 bundle 补齐，也不复制到相邻窗口；
@@ -225,6 +227,11 @@ flowchart TD
   Social context 与 User summary；
 - Long 默认顺序为 laughter → 日期/地点；同一个折叠区依次包含媒体、
   longer audio、Social context 与 User summary。
+
+地图、日历、时间线、主页最近记录和补充选择页显示的“X段笑声”优先统计 event 中实际
+存在的 laughter audio。旧 event 若没有可识别的 typed laughter audio，才回退使用
+`period_ids` 数量；两者都没有时显示“暂无笑声片段”，不会显示 `Period: 0` 或
+“0段笑声”。这里仅改变用户可见的统计口径，内部 JSON 字段与研究日志 schema 不变。
 
 新采集数据保存明确的 `bundle_id`、`bundle_trigger_time_ms`、
 `bundle_media_index` 和 `capture_time_ms`。读取旧 event 时，时间恢复优先使用已有字段，
@@ -292,6 +299,8 @@ Location reminder 先将符合条件的历史 GPS 点聚合为稳定地点，再
 | [`MainActivity.java`](atlasapp/src/main/java/com/hry/camera/usbcamerademo/MainActivity.java) | 主页面、USB 采集宿主和 session 生命周期 |
 | [`JoyfulMomentController.java`](atlasapp/src/main/java/com/hry/camera/usbcamerademo/JoyfulMomentController.java) | 检测、聚合、自动媒体、情境解析的协调器 |
 | [`AtlasReviewRepository.java`](atlasapp/src/main/java/com/hry/camera/usbcamerademo/AtlasReviewRepository.java) | 事件读取、格式归一化、编辑、删除 |
+| [`AtlasLaughterCountPolicy.java`](atlasapp/src/main/java/com/hry/camera/usbcamerademo/AtlasLaughterCountPolicy.java) | 从 typed laughter audio 派生用户可见计数，并兼容旧 `period_ids` |
+| [`AtlasLaughterCountPresentation.java`](atlasapp/src/main/java/com/hry/camera/usbcamerademo/AtlasLaughterCountPresentation.java) | 跨事件计数汇总、地图零值与数量文案 |
 | [`AtlasLaughterPlaybackPreparer.java`](atlasapp/src/main/java/com/hry/camera/usbcamerademo/AtlasLaughterPlaybackPreparer.java) | PCM16 WAV 响度分析、正增益和 App cache 播放副本 |
 | [`AtlasAggregationBucketPolicy.java`](atlasapp/src/main/java/com/hry/camera/usbcamerademo/AtlasAggregationBucketPolicy.java) | 采集与展示共用的 session 对齐 `clip × 3` 窗口边界 |
 | [`AtlasClipMediaMatcher.java`](atlasapp/src/main/java/com/hry/camera/usbcamerademo/AtlasClipMediaMatcher.java) | 收集显式 2+1 bundle，并按 15 秒窗口兼容旧媒体分组 |
@@ -453,8 +462,8 @@ Android Studio 中选择 `atlasapp` configuration 和真机后即可运行。没
 | Build type | Debug 研究/测试包，不是正式 Release |
 | Package | `com.hry.camera.atlasofhappiness` |
 | 文件大小 | 约 4.4 MB |
-| Source branch / commit | `fj_aggregate_ver` / `6e3593f` |
-| SHA-256 | `11f4ea9fd2acfded631186fdeaba030beb5f5246edad776ee5bb9529d463ca34` |
+| Source branch / commit | `fj_aggregate_ver` / `230f5ba` |
+| SHA-256 | `e6e67b5017b25319ac9ca1944fca814450230e9870ad93174d38235d24a2e253` |
 
 > [!NOTE]
 > 该 APK 当前位于维护者工作区的未跟踪 `artifacts/` 目录，没有随源码 push 到
