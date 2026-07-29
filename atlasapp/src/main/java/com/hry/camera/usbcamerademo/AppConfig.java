@@ -71,11 +71,8 @@ public final class AppConfig {
     /** Time window used only to infer capture bundles in legacy records. */
     public static final long LEGACY_CAPTURE_BUNDLE_GROUP_WINDOW_MS =
             15L * 1000L;
-    /**
-     * Auto photo/video capture is rate-limited to at most once per this many clips.
-     * Requirement: changed from 2*clip (60s @ 30s clips) to 4*clip (120s @ 30s clips).
-     */
-    public static final int AUTO_CAPTURE_RATE_LIMIT_CLIP_MULTIPLIER = 4;
+    /** Capture and resurfacing share one fixed window made from this many audio clips. */
+    public static final int AGGREGATION_CLIPS_PER_BUCKET = 3;
 
     // ---- Long-term vs short-term event display ----
     /** Events older than this (from "now") render with the long-term (compact) layout. */

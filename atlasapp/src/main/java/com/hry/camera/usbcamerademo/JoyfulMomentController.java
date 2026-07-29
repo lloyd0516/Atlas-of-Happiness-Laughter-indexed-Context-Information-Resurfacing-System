@@ -849,8 +849,13 @@ public class JoyfulMomentController {
     }
 
     private void triggerAutomationForDetectionIfNewClip(JoyfulMomentClusterer.DetectionRecord record, String eventId) {
-        int automationBucketSec = Math.max(1, config.clipDurationSec) * AppConfig.AUTO_CAPTURE_RATE_LIMIT_CLIP_MULTIPLIER;
-        int automationBucketId = (int) (record.startSec / automationBucketSec);
+        int automationBucketSec =
+                AtlasAggregationBucketPolicy.bucketDurationSec(
+                        config.clipDurationSec);
+        int automationBucketId =
+                AtlasAggregationBucketPolicy.bucketId(
+                        record.startSec,
+                        config.clipDurationSec);
         if (automationBucketId == lastAutomationBucketId) {
             JSONObject skipped = new JSONObject();
             try {

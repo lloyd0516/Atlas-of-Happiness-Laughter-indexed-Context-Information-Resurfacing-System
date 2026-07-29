@@ -43,4 +43,11 @@ public class JoyfulMomentConfigTest {
         assertEquals(1500L, AppConfig.autoCapturePhotoDelayMs(0));
         assertEquals(3500L, AppConfig.autoCapturePhotoDelayMs(1));
     }
+
+    @Test
+    public void captureAndReviewUseThreeClipBuckets() {
+        assertEquals(
+                3,
+                AppConfig.AGGREGATION_CLIPS_PER_BUCKET);
+    }
 }
