@@ -311,6 +311,10 @@ joyful_moment/
 它记录 session 运行时长、页面停留、补充步骤、详情展开、媒体播放、地图/回顾操作、
 设置变化和通知响应等交互元数据。
 
+完成播放会同时记录毫秒制 `duration_played` 和 `total_duration`，可计算实际播放比例；
+兼容字段 `played_duration_ms` 和 `duration_ms` 继续保留。保存决策首次写
+`is_update=false`，后续实际变化追加 `is_update=true`，旧日志行不会被覆盖。
+
 该研究日志不会写入用户回答文本、“和谁 / 在做什么 / 心情”的内容、转写文本、GPS
 经纬度、地址、媒体内容或媒体文件路径。完整字段和分析口径见
 [`docs/research-log-schema-v1.md`](docs/research-log-schema-v1.md)。
@@ -476,6 +480,7 @@ sh gradlew :atlasapp:testDebugUnitTest
 - `AtlasLaughterPlaybackPreparerTest`：PCM16 WAV 分析、缓存、原文件不变、峰值保护与安全回退；
 - `AtlasClipMediaMatcherTest`：±90 秒边界、最近媒体、平局、复用和无候选行为；
 - `AtlasMediaCaptureTimeResolverTest` / `JoyfulMomentMediaAssetTest`：新媒体时间持久化与旧时间恢复；
+- `ResearchLogPropertiesTest`：播放完成时长别名、首次/更新决策和相同选择 no-op；
 - `AtlasResurfacingSelectorTest`：`save_push` 资格、补充优先、媒体数量与确定性排序；
 - `AtlasReminderScheduleTest`：19:30 调度、跨日和 DST 日历窗口、catch-up；
 - `AtlasLocationReminderPolicyTest`：6 h 最小年龄与 2 h cooldown；

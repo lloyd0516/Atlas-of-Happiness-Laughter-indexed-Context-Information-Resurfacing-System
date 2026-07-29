@@ -49,7 +49,7 @@
 
 | `event_name` | `properties` |
 | --- | --- |
-| `moment_save_decision` | `action`, `push_allowed` |
+| `moment_save_decision` | `action`, `push_allowed`, `is_update` |
 | `supplement_flow_opened` | `entry_source` |
 | `supplement_step_skipped` | `step_name` |
 | `supplement_flow_completed` | `completion_reason`; moment 问答完成时还含 `answered_step_count`, `skipped_step_count`, `total_step_count`, `persistence_succeeded` |
@@ -63,6 +63,9 @@
 
 `answered_step_count` 只表示非空步骤数，日志层不接收或保存答案字符串。
 
+`moment_save_decision` 采用追加式历史：首次 A/B/C 为 `is_update=false`；已有决策成功
+变为另一项时为 `is_update=true`。重复选择同一 action、取消或持久化失败不写新行。
+
 ### 媒体
 
 | `event_name` | `properties` |
@@ -70,12 +73,16 @@
 | `media_opened` | `media_item_id`, `media_type`, `open_target` |
 | `media_play_started` | `media_item_id`, `media_type`, `playback_instance_id`, `position_ms`, `duration_ms`, `resumed` |
 | `media_play_paused` | `media_item_id`, `media_type`, `playback_instance_id`, `position_ms`, `played_duration_ms`, `reason` |
-| `media_play_completed` | `media_item_id`, `media_type`, `playback_instance_id`, `position_ms`, `duration_ms`, `played_duration_ms` |
+| `media_play_completed` | `media_item_id`, `media_type`, `playback_instance_id`, `position_ms`, `duration_ms`, `played_duration_ms`, `duration_played`, `total_duration` |
 | `media_play_failed` | `media_item_id`, `media_type`, `playback_instance_id`, `position_ms`, `played_duration_ms`, `failure_type` |
 
 `played_duration_ms` 是同一 `playback_instance_id` 的累计实际播放时间，暂停或页面隐藏的
 间隔不会计入。多次 pause 后继续播放时，不要直接相加每一行累计值；每个播放实例取
 `played_duration_ms` 的最大值，再跨实例求和。
+
+`duration_played` 与 `total_duration` 均为毫秒，分别等于兼容字段
+`played_duration_ms` 与 `duration_ms`。当 `total_duration > 0` 时，可计算
+`duration_played / total_duration`；非正总时长应排除。
 
 ### 回顾、地图与设置
 
