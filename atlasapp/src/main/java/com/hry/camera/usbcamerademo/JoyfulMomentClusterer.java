@@ -82,14 +82,36 @@ public class JoyfulMomentClusterer {
         public final String path;
         public final String contentUri;
         public final long captureTimeMs;
+        public final String bundleId;
+        public final long bundleTriggerTimeMs;
+        public final int bundleMediaIndex;
 
         public MediaAssetRecord(
                 String path,
                 String contentUri,
                 long captureTimeMs) {
+            this(
+                    path,
+                    contentUri,
+                    captureTimeMs,
+                    null,
+                    -1L,
+                    -1);
+        }
+
+        public MediaAssetRecord(
+                String path,
+                String contentUri,
+                long captureTimeMs,
+                String bundleId,
+                long bundleTriggerTimeMs,
+                int bundleMediaIndex) {
             this.path = path;
             this.contentUri = contentUri;
             this.captureTimeMs = captureTimeMs;
+            this.bundleId = bundleId;
+            this.bundleTriggerTimeMs = bundleTriggerTimeMs;
+            this.bundleMediaIndex = bundleMediaIndex;
         }
 
         JSONObject toJson() throws JSONException {
@@ -99,6 +121,15 @@ public class JoyfulMomentClusterer {
                 json.put("content_uri", contentUri);
             }
             json.put("capture_time_ms", captureTimeMs);
+            if (bundleId != null && bundleId.length() > 0) {
+                json.put("bundle_id", bundleId);
+                json.put(
+                        "bundle_trigger_time_ms",
+                        bundleTriggerTimeMs);
+                json.put(
+                        "bundle_media_index",
+                        bundleMediaIndex);
+            }
             return json;
         }
     }

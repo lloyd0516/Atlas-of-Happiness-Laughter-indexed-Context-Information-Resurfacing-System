@@ -907,16 +907,20 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
     }
 
     private void clearPendingJoyfulAutoRequests(String reason) {
-        for (AtlasCaptureBundleRequest ignored
+        for (AtlasCaptureBundleRequest request
                 : mJoyfulAutoCaptureQueue.drainAllVideos()) {
             if (mJoyfulController != null) {
-                mJoyfulController.onAutoVideoCaptureSkipped(reason);
+                mJoyfulController.onAutoVideoCaptureSkipped(
+                        request,
+                        reason);
             }
         }
-        for (AtlasCaptureBundleRequest.PhotoRequest ignored
+        for (AtlasCaptureBundleRequest.PhotoRequest request
                 : mJoyfulAutoCaptureQueue.drainAllPhotos()) {
             if (mJoyfulController != null) {
-                mJoyfulController.onAutoPhotoCaptureSkipped(reason);
+                mJoyfulController.onAutoPhotoCaptureSkipped(
+                        request,
+                        reason);
             }
         }
         mActiveJoyfulAutoVideoCaptureTimeMs = 0L;
@@ -953,7 +957,7 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
             mActiveJoyfulAutoVideoCaptureTimeMs = System.currentTimeMillis();
             if (mJoyfulController != null) {
                 mJoyfulController.onAutoVideoCaptureStarted(
-                        activeVideo.eventId,
+                        activeVideo,
                         mActiveJoyfulAutoVideoCaptureTimeMs);
             }
             Toast.makeText(MainActivity.this, "Joyful auto video started", Toast.LENGTH_SHORT).show();
@@ -963,10 +967,14 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
                 mHandler.sendEmptyMessageDelayed(MSG_JOYFUL_AUTO_STOP_RECORD, durationSec * 1000L);
             } else {
                 mJoyfulAutoRecording = false;
-                mJoyfulAutoCaptureQueue.completeActiveVideo();
+                AtlasCaptureBundleRequest failedVideo =
+                        mJoyfulAutoCaptureQueue
+                                .completeActiveVideo();
                 mActiveJoyfulAutoVideoCaptureTimeMs = 0L;
                 if (mJoyfulController != null) {
-                    mJoyfulController.onAutoVideoCaptureSkipped("record_start_failed");
+                    mJoyfulController.onAutoVideoCaptureSkipped(
+                            failedVideo,
+                            "record_start_failed");
                 }
             }
         }
@@ -1168,9 +1176,7 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
                       AtlasCaptureBundleRequest activeVideo =
                               mJoyfulAutoCaptureQueue.activeVideo();
                       mJoyfulController.onAutoVideoSaved(
-                              activeVideo != null
-                                      ? activeVideo.eventId
-                                      : null,
+                              activeVideo,
                               mMediaVideoPath,
                               uri != null ? uri.toString() : null,
                               mActiveJoyfulAutoVideoCaptureTimeMs);
@@ -1431,7 +1437,7 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
                 if (joyfulAutoPhotoRequest != null
                         && mJoyfulController != null) {
                     mJoyfulController.onAutoPhotoSaved(
-                            joyfulAutoPhotoRequest.bundle.eventId,
+                            joyfulAutoPhotoRequest,
                             path,
                             dateTaken);
                     runOnUiThread(new Runnable() {
@@ -1748,14 +1754,18 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
             public void run() {
                 if (!hasJoyfulCameraPermissions()) {
                     if (mJoyfulController != null) {
-                        mJoyfulController.onAutoVideoCaptureSkipped("camera_permission_missing");
+                        mJoyfulController.onAutoVideoCaptureSkipped(
+                                request,
+                                "camera_permission_missing");
                     }
                     Toast.makeText(MainActivity.this, "Joyful auto video skipped: camera permission missing", Toast.LENGTH_SHORT).show();
                     return;
                 }
                 if (m_bIsRecording && !mJoyfulAutoRecording) {
                     if (mJoyfulController != null) {
-                        mJoyfulController.onAutoVideoCaptureSkipped("recording_busy");
+                        mJoyfulController.onAutoVideoCaptureSkipped(
+                                request,
+                                "recording_busy");
                     }
                     return;
                 }
@@ -1773,7 +1783,9 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
             public void run() {
                 if (!hasJoyfulCameraPermissions()) {
                     if (mJoyfulController != null) {
-                        mJoyfulController.onAutoPhotoCaptureSkipped("camera_permission_missing");
+                        mJoyfulController.onAutoPhotoCaptureSkipped(
+                                request,
+                                "camera_permission_missing");
                     }
                     Toast.makeText(MainActivity.this, "Joyful auto photo skipped: camera permission missing", Toast.LENGTH_SHORT).show();
                     return;

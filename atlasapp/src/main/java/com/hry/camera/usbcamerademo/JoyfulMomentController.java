@@ -1014,11 +1014,31 @@ public class JoyfulMomentController {
     public synchronized void onAutoVideoCaptureStarted(
             String eventId,
             long captureTimeMs) {
+        appendAutoVideoCaptureStarted(
+                eventId,
+                captureTimeMs,
+                null);
+    }
+
+    public synchronized void onAutoVideoCaptureStarted(
+            AtlasCaptureBundleRequest request,
+            long captureTimeMs) {
+        appendAutoVideoCaptureStarted(
+                request != null ? request.eventId : null,
+                captureTimeMs,
+                request);
+    }
+
+    private void appendAutoVideoCaptureStarted(
+            String eventId,
+            long captureTimeMs,
+            AtlasCaptureBundleRequest request) {
         JSONObject json = new JSONObject();
         try {
             json.put("type", "asset.auto_video.started");
             json.put("event_id", eventId);
             json.put("capture_time_ms", captureTimeMs);
+            putBundleFields(json, request, -1);
         } catch (JSONException ignored) {
         }
         appendJson("detection_log.jsonl", json);
@@ -1030,6 +1050,28 @@ public class JoyfulMomentController {
 
     public synchronized void onAutoPhotoCaptureSkipped(String reason) {
         appendAssetStatus("asset.auto_photo.skipped", reason, null);
+    }
+
+    public synchronized void onAutoVideoCaptureSkipped(
+            AtlasCaptureBundleRequest request,
+            String reason) {
+        appendAssetStatus(
+                "asset.auto_video.skipped",
+                request,
+                -1,
+                reason,
+                null);
+    }
+
+    public synchronized void onAutoPhotoCaptureSkipped(
+            AtlasCaptureBundleRequest.PhotoRequest request,
+            String reason) {
+        appendAssetStatus(
+                "asset.auto_photo.skipped",
+                request != null ? request.bundle : null,
+                request != null ? request.mediaIndex : -1,
+                reason,
+                null);
     }
 
     public synchronized void onAutoVideoSaved(String path, String contentUri) {
@@ -1053,10 +1095,39 @@ public class JoyfulMomentController {
             String path,
             String contentUri,
             long captureTimeMs) {
+        onAutoVideoSavedInternal(
+                eventId,
+                path,
+                contentUri,
+                captureTimeMs,
+                null);
+    }
+
+    public synchronized void onAutoVideoSaved(
+            AtlasCaptureBundleRequest request,
+            String path,
+            String contentUri,
+            long captureTimeMs) {
+        onAutoVideoSavedInternal(
+                request != null ? request.eventId : null,
+                path,
+                contentUri,
+                captureTimeMs,
+                request);
+    }
+
+    private void onAutoVideoSavedInternal(
+            String eventId,
+            String path,
+            String contentUri,
+            long captureTimeMs,
+            AtlasCaptureBundleRequest request) {
         if (path == null) {
             appendAssetStatus(
                     "asset.auto_video.save_failed",
                     eventId,
+                    request,
+                    -1,
                     "missing_path",
                     null);
             return;
@@ -1078,12 +1149,25 @@ public class JoyfulMomentController {
                                 contentUri,
                                 captureTimeMs > 0L
                                         ? captureTimeMs
-                                        : System.currentTimeMillis()));
+                                        : System.currentTimeMillis(),
+                                request != null
+                                        ? request.bundleId
+                                        : null,
+                                request != null
+                                        ? request.triggerTimeMs
+                                        : -1L,
+                                request != null ? 0 : -1));
             }
             appendJson("event_log.jsonl", safeJson(eventRecord));
             writeEventRecord(eventRecord);
         }
-        appendAssetStatus("asset.auto_video.saved", eventId, "ok", stablePath);
+        appendAssetStatus(
+                "asset.auto_video.saved",
+                eventId,
+                request,
+                -1,
+                "ok",
+                stablePath);
     }
 
     public synchronized void onAutoPhotoSaved(String path) {
@@ -1104,10 +1188,35 @@ public class JoyfulMomentController {
             String eventId,
             String path,
             long captureTimeMs) {
+        onAutoPhotoSavedInternal(
+                eventId,
+                path,
+                captureTimeMs,
+                null);
+    }
+
+    public synchronized void onAutoPhotoSaved(
+            AtlasCaptureBundleRequest.PhotoRequest request,
+            String path,
+            long captureTimeMs) {
+        onAutoPhotoSavedInternal(
+                request != null ? request.bundle.eventId : null,
+                path,
+                captureTimeMs,
+                request);
+    }
+
+    private void onAutoPhotoSavedInternal(
+            String eventId,
+            String path,
+            long captureTimeMs,
+            AtlasCaptureBundleRequest.PhotoRequest request) {
         if (path == null) {
             appendAssetStatus(
                     "asset.auto_photo.save_failed",
                     eventId,
+                    request != null ? request.bundle : null,
+                    request != null ? request.mediaIndex : -1,
                     "missing_path",
                     null);
             return;
@@ -1125,11 +1234,26 @@ public class JoyfulMomentController {
                             null,
                             captureTimeMs > 0L
                                     ? captureTimeMs
-                                    : System.currentTimeMillis()));
+                                    : System.currentTimeMillis(),
+                            request != null
+                                    ? request.bundle.bundleId
+                                    : null,
+                            request != null
+                                    ? request.bundle.triggerTimeMs
+                                    : -1L,
+                            request != null
+                                    ? request.mediaIndex
+                                    : -1));
             appendJson("event_log.jsonl", safeJson(eventRecord));
             writeEventRecord(eventRecord);
         }
-        appendAssetStatus("asset.auto_photo.saved", eventId, "ok", stablePath);
+        appendAssetStatus(
+                "asset.auto_photo.saved",
+                eventId,
+                request != null ? request.bundle : null,
+                request != null ? request.mediaIndex : -1,
+                "ok",
+                stablePath);
     }
 
     private String copyAssetIntoSession(String eventId, String sourcePath, String folderName, String prefix) {
@@ -1186,17 +1310,65 @@ public class JoyfulMomentController {
     }
 
     private void appendAssetStatus(String type, String eventId, String reason, String path) {
+        appendAssetStatus(
+                type,
+                eventId,
+                null,
+                -1,
+                reason,
+                path);
+    }
+
+    private void appendAssetStatus(
+            String type,
+            AtlasCaptureBundleRequest request,
+            int mediaIndex,
+            String reason,
+            String path) {
+        appendAssetStatus(
+                type,
+                request != null ? request.eventId : null,
+                request,
+                mediaIndex,
+                reason,
+                path);
+    }
+
+    private void appendAssetStatus(
+            String type,
+            String eventId,
+            AtlasCaptureBundleRequest request,
+            int mediaIndex,
+            String reason,
+            String path) {
         JSONObject json = new JSONObject();
         try {
             json.put("type", type);
             json.put("event_id", eventId);
             json.put("reason", reason);
+            putBundleFields(json, request, mediaIndex);
             if (path != null) {
                 json.put("path", path);
             }
         } catch (JSONException ignored) {
         }
         appendJson("detection_log.jsonl", json);
+    }
+
+    private void putBundleFields(
+            JSONObject json,
+            AtlasCaptureBundleRequest request,
+            int mediaIndex) throws JSONException {
+        if (json == null || request == null) {
+            return;
+        }
+        json.put("bundle_id", request.bundleId);
+        json.put(
+                "bundle_trigger_time_ms",
+                request.triggerTimeMs);
+        if (mediaIndex >= 0) {
+            json.put("bundle_media_index", mediaIndex);
+        }
     }
 
     private JoyfulMomentClusterer.PeriodRecord findPeriodById(String periodId) {
