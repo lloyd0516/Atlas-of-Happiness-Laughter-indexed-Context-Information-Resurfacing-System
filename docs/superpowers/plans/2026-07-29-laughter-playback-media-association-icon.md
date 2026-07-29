@@ -1,5 +1,9 @@
 # Laughter Playback, Clip Media Association, and Icon Implementation Plan
 
+> **媒体关联勘误（2026-07-29）：** 本计划中“每类最多 1 个”的媒体关联方案已被
+> `2026-07-29-clip-capture-bundle-correction.md` 取代。当前规则为每个 clip
+> 匹配最近的一个固定 `2 photos + 1 video` bundle。本计划的音频增益和图标任务仍有效。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 在不修改原始研究音频和既有采集/回顾功能的前提下，为过小笑声提供保持相对强弱的 App 内播放增强，为每个 laughter clip 关联 `±90s` 内最近的一张照片和一个视频，并统一替换为“笑声涟漪”图标。
