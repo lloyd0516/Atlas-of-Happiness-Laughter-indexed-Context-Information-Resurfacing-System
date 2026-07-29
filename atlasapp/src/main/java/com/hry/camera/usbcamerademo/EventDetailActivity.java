@@ -398,11 +398,314 @@ public class EventDetailActivity extends AppCompatActivity {
         headerRecency.setText(longTermMode
                 ? AtlasRelativeTimeFormatter.formatLongTermHeader(this, startMs, nowMs)
                 : AtlasRelativeTimeFormatter.format(this, startMs, nowMs));
-        renderClipCards();
+        renderWindowCards();
         renderTimeline();
         renderAutoMedia();
         renderContext();
         renderUserGenerated();
+    }
+
+    private void renderWindowCards() {
+        clipCardsContainer.removeAllViews();
+        JSONObject auto = eventJson.optJSONObject("auto_captured");
+        JSONObject meta = eventJson.optJSONObject("_meta");
+        if (auto == null || meta == null) {
+            return;
+        }
+        JSONArray audioClips = auto.optJSONArray("audio_clips");
+        long sessionStartMs =
+                meta.optLong("session_start_ms", -1L);
+        int clipDurationSec =
+                meta.optInt("clip_duration_sec", -1);
+        int contextNeighborClips =
+                meta.optInt("context_neighbor_clips", -1);
+        List<AtlasResurfacingWindowAggregator.Window> windows =
+                AtlasResurfacingWindowAggregator.aggregate(
+                        audioClips,
+                        auto.optJSONArray("photos"),
+                        auto.optJSONArray("videos"),
+                        sessionStartMs,
+                        clipDurationSec,
+                        contextNeighborClips,
+                        AppConfig
+                                .LEGACY_CAPTURE_BUNDLE_GROUP_WINDOW_MS);
+        JSONObject socialContext =
+                repository.getSocialContext(eventJson);
+        boolean hasSocialContext =
+                repository.hasSocialContext(eventJson);
+        LayoutInflater inflater = LayoutInflater.from(this);
+        for (int i = 0; i < windows.size(); i++) {
+            View card = inflater.inflate(
+                    R.layout.item_laughter_clip_card,
+                    clipCardsContainer,
+                    false);
+            bindWindowCard(
+                    card,
+                    i + 1,
+                    windows.get(i),
+                    i == windows.size() - 1,
+                    hasSocialContext,
+                    socialContext);
+            clipCardsContainer.addView(card);
+        }
+    }
+
+    private void bindWindowCard(
+            View card,
+            int windowNumber,
+            AtlasResurfacingWindowAggregator.Window window,
+            boolean isLast,
+            boolean hasSocialContext,
+            JSONObject socialContext) {
+        TextView durationBadge =
+                card.findViewById(R.id.txtClipDurationBadge);
+        View rail = card.findViewById(R.id.clipRail);
+        TextView title = card.findViewById(R.id.txtClipTitle);
+        TextView timeRange = card.findViewById(R.id.txtClipTimeRange);
+        LinearLayout laughterContainer =
+                card.findViewById(
+                        R.id.windowLaughterAudioContainer);
+        View photoStripShort =
+                card.findViewById(R.id.clipPhotoStripShort);
+        LinearLayout photoStripShortContainer =
+                card.findViewById(
+                        R.id.clipPhotoStripShortContainer);
+        TextView locationDateView =
+                card.findViewById(R.id.txtClipLocationDate);
+        LinearLayout contextContainerShort =
+                card.findViewById(
+                        R.id.windowContextAudioContainerShort);
+        final View expandedDetails =
+                card.findViewById(R.id.clipExpandedDetails);
+        View labelPhotoVideoLong =
+                card.findViewById(R.id.labelClipPhotoVideoLong);
+        View photoStripLong =
+                card.findViewById(R.id.clipPhotoStripLong);
+        LinearLayout photoStripLongContainer =
+                card.findViewById(
+                        R.id.clipPhotoStripLongContainer);
+        View labelContextAudioLong =
+                card.findViewById(R.id.labelClipContextAudioLong);
+        LinearLayout contextContainerLong =
+                card.findViewById(
+                        R.id.windowContextAudioContainerLong);
+        TextView socialContextText =
+                card.findViewById(R.id.txtClipSocialContext);
+        final LinearLayout notesLogContainer =
+                card.findViewById(R.id.clipNotesLogContainer);
+        final EditText userSummaryInput =
+                card.findViewById(R.id.inputClipUserSummary);
+        Button addNoteButton =
+                card.findViewById(R.id.btnClipAddNote);
+        Button toggleButton =
+                card.findViewById(R.id.btnClipToggleDetails);
+
+        boolean hasMedia =
+                !window.photoPaths.isEmpty()
+                        || !window.videoPaths.isEmpty();
+        boolean hasContext = !window.contextClips.isEmpty();
+        List<AtlasResurfacingWindowPresentation.Section>
+                defaultSections =
+                AtlasResurfacingWindowPresentation.visibleSections(
+                        longTermMode,
+                        false,
+                        hasMedia,
+                        hasContext);
+        List<AtlasResurfacingWindowPresentation.Section>
+                expandedSections =
+                AtlasResurfacingWindowPresentation.visibleSections(
+                        longTermMode,
+                        true,
+                        hasMedia,
+                        hasContext);
+
+        durationBadge.setText(formatDurationShort(
+                window.totalLaughterDurationSec));
+        rail.setVisibility(isLast ? View.INVISIBLE : View.VISIBLE);
+        title.setText(getString(
+                R.string.resurfacing_window_label,
+                windowNumber));
+        timeRange.setText(formatWindowTimeRange(
+                window.startTimeMs,
+                window.endTimeMs));
+        locationDateView.setText(locationDateTextOrFallback());
+
+        populateAudioRows(
+                laughterContainer,
+                window.laughterClips,
+                "laughter_audio");
+
+        boolean shortShowsMedia =
+                defaultSections.contains(
+                        AtlasResurfacingWindowPresentation.Section.MEDIA);
+        photoStripShort.setVisibility(
+                shortShowsMedia ? View.VISIBLE : View.GONE);
+        if (shortShowsMedia) {
+            populatePhotoStrip(
+                    photoStripShortContainer,
+                    window.photoPaths,
+                    window.videoPaths);
+        }
+
+        boolean shortShowsContext =
+                defaultSections.contains(
+                        AtlasResurfacingWindowPresentation
+                                .Section.CONTEXT_AUDIO);
+        contextContainerShort.setVisibility(
+                shortShowsContext ? View.VISIBLE : View.GONE);
+        if (shortShowsContext) {
+            populateAudioRows(
+                    contextContainerShort,
+                    window.contextClips,
+                    "context_audio");
+        }
+
+        boolean longShowsMedia =
+                longTermMode
+                        && expandedSections.contains(
+                        AtlasResurfacingWindowPresentation
+                                .Section.MEDIA);
+        labelPhotoVideoLong.setVisibility(
+                longShowsMedia ? View.VISIBLE : View.GONE);
+        photoStripLong.setVisibility(
+                longShowsMedia ? View.VISIBLE : View.GONE);
+        if (longShowsMedia) {
+            populatePhotoStrip(
+                    photoStripLongContainer,
+                    window.photoPaths,
+                    window.videoPaths);
+        }
+
+        boolean longShowsContext =
+                longTermMode
+                        && expandedSections.contains(
+                        AtlasResurfacingWindowPresentation
+                                .Section.CONTEXT_AUDIO);
+        labelContextAudioLong.setVisibility(
+                longShowsContext ? View.VISIBLE : View.GONE);
+        contextContainerLong.setVisibility(
+                longShowsContext ? View.VISIBLE : View.GONE);
+        if (longShowsContext) {
+            populateAudioRows(
+                    contextContainerLong,
+                    window.contextClips,
+                    "context_audio");
+        }
+
+        socialContextText.setText(
+                hasSocialContext
+                        ? buildSocialContextDetailText(socialContext)
+                        : getString(R.string.social_context_empty));
+        renderNotesLog(notesLogContainer);
+        addNoteButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String text = userSummaryInput.getText()
+                        .toString()
+                        .trim();
+                if (TextUtils.isEmpty(text)) {
+                    return;
+                }
+                if (repository.addTextNote(
+                        eventJson,
+                        text,
+                        "aggregate_window_summary")) {
+                    logMomentEditCompleted(
+                            "text_note",
+                            "add",
+                            null);
+                    userSummaryInput.setText("");
+                    reloadEvent();
+                    renderNotesLog(notesLogContainer);
+                }
+            }
+        });
+
+        final ResearchVisitTimer[] expandedTimer =
+                new ResearchVisitTimer[]{
+                        new ResearchVisitTimer()};
+        final String windowResearchId =
+                ResearchIdentifiers.anonymousId(
+                        "window",
+                        eventId + ":" + window.bucketId);
+        toggleButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                boolean expanded =
+                        expandedDetails.getVisibility()
+                                == View.VISIBLE;
+                expandedDetails.setVisibility(
+                        expanded ? View.GONE : View.VISIBLE);
+                ((Button) v).setText(
+                        expanded
+                                ? R.string.btn_view_more_details
+                                : R.string.btn_collapse_details);
+                if (expanded) {
+                    long durationMs =
+                            expandedTimer[0].pause(
+                                    SystemClock.elapsedRealtime());
+                    ResearchInteractionLogger.log(
+                            EventDetailActivity.this,
+                            ResearchEventNames
+                                    .DETAIL_SECTION_COLLAPSED,
+                            sessionId,
+                            eventId,
+                            null,
+                            ResearchInteractionLogger.properties(
+                                    "section_name",
+                                    "aggregate_window_details",
+                                    "clip_id",
+                                    windowResearchId,
+                                    "expanded_duration_ms",
+                                    durationMs));
+                } else {
+                    expandedTimer[0] =
+                            new ResearchVisitTimer();
+                    expandedTimer[0].start(
+                            SystemClock.elapsedRealtime());
+                    ResearchInteractionLogger.log(
+                            EventDetailActivity.this,
+                            ResearchEventNames
+                                    .DETAIL_SECTION_EXPANDED,
+                            sessionId,
+                            eventId,
+                            null,
+                            ResearchInteractionLogger.properties(
+                                    "section_name",
+                                    "aggregate_window_details",
+                                    "clip_id",
+                                    windowResearchId));
+                }
+            }
+        });
+    }
+
+    private void populateAudioRows(
+            LinearLayout container,
+            List<JSONObject> clips,
+            String mediaType) {
+        container.removeAllViews();
+        LayoutInflater inflater = LayoutInflater.from(this);
+        for (JSONObject clip : clips) {
+            View row = inflater.inflate(
+                    R.layout.item_resurfacing_audio_row,
+                    container,
+                    false);
+            ImageView playIcon = row.findViewById(
+                    R.id.imgResurfacingAudioPlay);
+            AtlasWaveformView waveform = row.findViewById(
+                    R.id.waveResurfacingAudio);
+            TextView duration = row.findViewById(
+                    R.id.txtResurfacingAudioDuration);
+            wireAudioControl(
+                    row,
+                    playIcon,
+                    waveform,
+                    duration,
+                    clip.optString("path", null),
+                    mediaType);
+            container.addView(row);
+        }
     }
 
     /**
@@ -917,6 +1220,16 @@ public class EventDetailActivity extends AppCompatActivity {
         SimpleDateFormat exact = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
         long endMs = startMs + Math.round(durationSec * 1000.0);
         return exact.format(new Date(startMs)) + " — " + exact.format(new Date(endMs));
+    }
+
+    private String formatWindowTimeRange(long startMs, long endMs) {
+        SimpleDateFormat exact =
+                new SimpleDateFormat(
+                        "HH:mm:ss",
+                        Locale.getDefault());
+        return exact.format(new Date(startMs))
+                + " — "
+                + exact.format(new Date(endMs));
     }
 
     private String buildLocationDateText() {

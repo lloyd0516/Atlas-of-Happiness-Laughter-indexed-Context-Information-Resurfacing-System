@@ -182,6 +182,7 @@
 
     <!-- Long-term / short-term event display (requirement 4) -->
     <string name="clip_label_prefix">Laughter clip</string>
+    <string name="resurfacing_window_label">Moment %1$d</string>
     <string name="social_context_title">Social context</string>
     <string name="social_context_empty">Not filled in yet.</string>
     <string name="user_summary_title">User summary</string>

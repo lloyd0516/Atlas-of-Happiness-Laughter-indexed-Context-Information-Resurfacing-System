@@ -2,6 +2,9 @@ package com.hry.camera.usbcamerademo;
 
 import org.junit.Test;
 
+import java.io.File;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
 import java.util.Arrays;
 
 import static com.hry.camera.usbcamerademo.AtlasResurfacingWindowPresentation.Section.CONTEXT_AUDIO;
@@ -10,6 +13,8 @@ import static com.hry.camera.usbcamerademo.AtlasResurfacingWindowPresentation.Se
 import static com.hry.camera.usbcamerademo.AtlasResurfacingWindowPresentation.Section.MEDIA;
 import static com.hry.camera.usbcamerademo.AtlasResurfacingWindowPresentation.Section.SOCIAL_AND_SUMMARY;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class AtlasResurfacingWindowPresentationTest {
     @Test
@@ -85,5 +90,39 @@ public class AtlasResurfacingWindowPresentationTest {
                         true,
                         false,
                         false));
+    }
+
+    @Test
+    public void cardLayoutUsesDynamicAudioContainers() throws Exception {
+        File layout = new File(
+                "atlasapp/src/main/res/layout/item_laughter_clip_card.xml");
+        if (!layout.isFile()) {
+            layout = new File(
+                    "src/main/res/layout/item_laughter_clip_card.xml");
+        }
+        String xml = new String(
+                Files.readAllBytes(layout.toPath()),
+                Charset.forName("UTF-8"));
+
+        assertTrue(xml.contains("windowLaughterAudioContainer"));
+        assertTrue(xml.contains("clipPhotoStripShort"));
+        assertTrue(xml.contains("txtClipLocationDate"));
+        assertTrue(xml.contains("windowContextAudioContainerShort"));
+        assertFalse(xml.contains("clipLaughterAudioRow"));
+        assertFalse(xml.contains("clipContextAudioRowShort"));
+        assertTrue(
+                xml.indexOf("windowLaughterAudioContainer")
+                        < xml.indexOf("clipPhotoStripShort"));
+        assertTrue(
+                xml.indexOf("clipPhotoStripShort")
+                        < xml.indexOf("txtClipLocationDate"));
+        assertTrue(
+                xml.indexOf("txtClipLocationDate")
+                        < xml.indexOf(
+                        "windowContextAudioContainerShort"));
+        assertTrue(
+                xml.indexOf("clipPhotoStripLong")
+                        < xml.indexOf(
+                        "windowContextAudioContainerLong"));
     }
 }

@@ -72,7 +72,12 @@
                 android:textSize="11sp" />
         </LinearLayout>
 
-        <!-- Short-term only: photo/video strip appears above the audio rows. -->
+        <LinearLayout
+            android:id="@+id/windowLaughterAudioContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+
         <HorizontalScrollView
             android:id="@+id/clipPhotoStripShort"
             android:layout_width="match_parent"
@@ -88,70 +93,6 @@
                 android:orientation="horizontal" />
         </HorizontalScrollView>
 
-        <!-- Laughter audio row (always shown by default in both modes). -->
-        <LinearLayout
-            android:id="@+id/clipLaughterAudioRow"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <ImageView
-                android:id="@+id/imgClipLaughterPlay"
-                android:layout_width="34dp"
-                android:layout_height="34dp"
-                android:src="@drawable/ic_atlas_play_circle" />
-
-            <com.hry.camera.usbcamerademo.AtlasWaveformView
-                android:id="@+id/waveClipLaughter"
-                android:layout_width="0dp"
-                android:layout_height="24dp"
-                android:layout_marginStart="10dp"
-                android:layout_weight="1" />
-
-            <TextView
-                android:id="@+id/txtClipLaughterDuration"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="10dp"
-                android:textColor="@color/mock_text_muted"
-                android:textSize="12sp" />
-        </LinearLayout>
-
-        <!-- Short-term only: related-context audio row also shown by default. -->
-        <LinearLayout
-            android:id="@+id/clipContextAudioRowShort"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:visibility="gone">
-
-            <ImageView
-                android:id="@+id/imgClipContextPlayShort"
-                android:layout_width="34dp"
-                android:layout_height="34dp"
-                android:src="@drawable/ic_atlas_play_circle" />
-
-            <com.hry.camera.usbcamerademo.AtlasWaveformView
-                android:id="@+id/waveClipContextShort"
-                android:layout_width="0dp"
-                android:layout_height="24dp"
-                android:layout_marginStart="10dp"
-                android:layout_weight="1" />
-
-            <TextView
-                android:id="@+id/txtClipContextAudioDurationShort"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="10dp"
-                android:textColor="@color/mock_text_muted"
-                android:textSize="12sp" />
-        </LinearLayout>
-
-        <!-- Location + date row (always shown by default in both modes). -->
         <TextView
             android:id="@+id/txtClipLocationDate"
             android:layout_width="match_parent"
@@ -161,20 +102,11 @@
             android:textColor="@color/mock_text_muted"
             android:textSize="12sp" />
 
-        <!-- Long-term only: social tag pill shown inline (never in the default short view). -->
-        <TextView
-            android:id="@+id/txtClipSocialTagPill"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:id="@+id/windowContextAudioContainerShort"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:background="@drawable/atlas_map_stat_pill"
-            android:paddingStart="10dp"
-            android:paddingTop="3dp"
-            android:paddingEnd="10dp"
-            android:paddingBottom="3dp"
-            android:textColor="@color/mock_orange_dark"
-            android:textSize="11sp"
-            android:visibility="gone" />
+            android:orientation="vertical" />
 
         <!-- Expanded details, identical content for both modes; only the toggle label differs. -->
         <LinearLayout
@@ -229,35 +161,10 @@
                 android:visibility="gone" />
 
             <LinearLayout
-                android:id="@+id/clipContextAudioRowLong"
+                android:id="@+id/windowContextAudioContainerLong"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:visibility="gone">
-
-                <ImageView
-                    android:id="@+id/imgClipContextPlayLong"
-                    android:layout_width="34dp"
-                    android:layout_height="34dp"
-                    android:src="@drawable/ic_atlas_play_circle" />
-
-                <com.hry.camera.usbcamerademo.AtlasWaveformView
-                    android:id="@+id/waveClipContextLong"
-                    android:layout_width="0dp"
-                    android:layout_height="24dp"
-                    android:layout_marginStart="10dp"
-                    android:layout_weight="1" />
-
-                <TextView
-                    android:id="@+id/txtClipContextAudioDurationLong"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:textColor="@color/mock_text_muted"
-                    android:textSize="12sp" />
-            </LinearLayout>
+                android:orientation="vertical" />
 
             <!-- Social context: same event-level value shown in every clip's expanded section. -->
             <TextView

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Kept only while the legacy per-laughter binder remains source-compatible. -->
+    <item name="clipLaughterAudioRow" type="id" />
+    <item name="imgClipLaughterPlay" type="id" />
+    <item name="waveClipLaughter" type="id" />
+    <item name="txtClipLaughterDuration" type="id" />
+    <item name="clipContextAudioRowShort" type="id" />
+    <item name="imgClipContextPlayShort" type="id" />
+    <item name="waveClipContextShort" type="id" />
+    <item name="txtClipContextAudioDurationShort" type="id" />
+    <item name="txtClipSocialTagPill" type="id" />
+    <item name="clipContextAudioRowLong" type="id" />
+    <item name="imgClipContextPlayLong" type="id" />
+    <item name="waveClipContextLong" type="id" />
+    <item name="txtClipContextAudioDurationLong" type="id" />
+</resources>

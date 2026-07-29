@@ -181,6 +181,7 @@
 
     <!-- 长期/短期呈现（需求4） -->
     <string name="clip_label_prefix">笑声片段</string>
+    <string name="resurfacing_window_label">回顾片段 %1$d</string>
     <string name="social_context_title">社交背景</string>
     <string name="social_context_empty">还没有补充。</string>
     <string name="user_summary_title">用户摘要</string>
