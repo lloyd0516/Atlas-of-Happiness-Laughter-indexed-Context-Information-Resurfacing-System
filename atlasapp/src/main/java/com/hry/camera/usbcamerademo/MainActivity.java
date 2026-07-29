@@ -1159,6 +1159,8 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
             showRecordingUI(false);
 
             Uri uri = null;
+              AtlasCaptureBundleRequest activeVideo =
+                      mJoyfulAutoCaptureQueue.activeVideo();
               if (!TextUtils.isEmpty(mMediaVideoPath)) {
                   // 保存到媒体库
                  uri = mFileUtil.insertVideoToMediaStore(mContentResolver, mMediaVideoTitle, mMediaVideoDateTaken, mMediaVideoPath,
@@ -1173,8 +1175,6 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
                   // 显示提示消息
                   Toast.makeText(MainActivity.this, "视频已完成录制!", Toast.LENGTH_SHORT).show();
                   if (mLastRecordWasJoyfulAuto && mJoyfulController != null) {
-                      AtlasCaptureBundleRequest activeVideo =
-                              mJoyfulAutoCaptureQueue.activeVideo();
                       mJoyfulController.onAutoVideoSaved(
                               activeVideo,
                               mMediaVideoPath,
@@ -1182,6 +1182,13 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
                               mActiveJoyfulAutoVideoCaptureTimeMs);
                       Toast.makeText(MainActivity.this, "Joyful auto video saved", Toast.LENGTH_SHORT).show();
                   }
+              } else if (mLastRecordWasJoyfulAuto
+                      && mJoyfulController != null) {
+                  mJoyfulController.onAutoVideoSaved(
+                          activeVideo,
+                          null,
+                          null,
+                          mActiveJoyfulAutoVideoCaptureTimeMs);
               }
 
             // 设置停止标记
@@ -1421,38 +1428,47 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
 
             Bitmap bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
             bitmap.setPixels(data, 0, w, 0, 0, w, h);
+            final AtlasCaptureBundleRequest.PhotoRequest
+                    joyfulAutoPhotoRequest =
+                    consumePendingJoyfulAutoPhoto();
 
             String title = mFileUtil.createJpgName(dateTaken);
             String path = mFileUtil.generateJpgPath(title);
-            if (!mFileUtil.writeBitmap(bitmap, path))
-                return;
-
-            Uri uri = mFileUtil.insertImageToMediaStore(mContentResolver, title, dateTaken, path, bitmap.getByteCount(), w, h);
-            if (uri != null) {
-
-                mFileUtil.broadcastNewImage(MainActivity.this, uri);
-                final AtlasCaptureBundleRequest.PhotoRequest
-                        joyfulAutoPhotoRequest =
-                        consumePendingJoyfulAutoPhoto();
+            if (!mFileUtil.writeBitmap(bitmap, path)) {
                 if (joyfulAutoPhotoRequest != null
                         && mJoyfulController != null) {
                     mJoyfulController.onAutoPhotoSaved(
                             joyfulAutoPhotoRequest,
-                            path,
+                            null,
                             dateTaken);
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            Toast.makeText(MainActivity.this, "Joyful auto photo saved", Toast.LENGTH_SHORT).show();
-                        }
-                    });
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            maybeSleepJoyfulAutoCamera();
-                        }
-                    });
                 }
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        maybeSleepJoyfulAutoCamera();
+                    }
+                });
+                return;
+            }
+
+            Uri uri = mFileUtil.insertImageToMediaStore(mContentResolver, title, dateTaken, path, bitmap.getByteCount(), w, h);
+            if (joyfulAutoPhotoRequest != null
+                    && mJoyfulController != null) {
+                mJoyfulController.onAutoPhotoSaved(
+                        joyfulAutoPhotoRequest,
+                        path,
+                        dateTaken);
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Toast.makeText(MainActivity.this, "Joyful auto photo saved", Toast.LENGTH_SHORT).show();
+                        maybeSleepJoyfulAutoCamera();
+                    }
+                });
+            }
+            if (uri != null) {
+
+                mFileUtil.broadcastNewImage(MainActivity.this, uri);
 
                 boolean needThumbnail;
                 synchronized (this) {
