@@ -27,8 +27,10 @@ public class JoyfulMomentController {
     public interface HostCallbacks {
         void onJoyfulStatusChanged(String text);
         void onJoyfulPromptRequested(String periodId);
-        void onJoyfulAutoVideoRequested(int durationSec);
-        void onJoyfulAutoPhotoRequested();
+        void onJoyfulAutoVideoRequested(
+                AtlasCaptureBundleRequest request);
+        void onJoyfulAutoPhotoRequested(
+                AtlasCaptureBundleRequest.PhotoRequest request);
         void onJoyfulUsbAudioChunk(byte[] pcm16le, int byteLen, int sampleRate, int channelCount);
         /** Requirement 1: recording page shows the wall-clock time of the most recent accepted laughter. */
         void onLastLaughterDetected(long timestampMs);
@@ -870,13 +872,26 @@ public class JoyfulMomentController {
     private void triggerAutomationForDetection(String eventId, int automationBucketId, int automationBucketSec) {
         lastTriggeredEventId = eventId;
         lastTriggeredPeriodId = null;
-        final int finalTriggerVideoDurationSec = config.triggerVideoDurationSec;
+        final AtlasCaptureBundleRequest request =
+                AtlasCaptureBundleRequest.create(
+                        eventId,
+                        automationBucketId,
+                        System.currentTimeMillis(),
+                        config.triggerVideoDurationSec);
         JSONObject status = new JSONObject();
         try {
             status.put("type", "automation.triggered_by_detection");
             status.put("event_id", eventId);
-            status.put("auto_video_duration_sec", finalTriggerVideoDurationSec);
-            status.put("auto_photo_count", config.triggerPhotoCount);
+            status.put("bundle_id", request.bundleId);
+            status.put(
+                    "bundle_trigger_time_ms",
+                    request.triggerTimeMs);
+            status.put(
+                    "auto_video_duration_sec",
+                    request.videoDurationSec);
+            status.put(
+                    "auto_photo_count",
+                    AppConfig.AUTO_CAPTURE_PHOTOS_PER_BUNDLE);
             status.put("automation_bucket_id", automationBucketId);
             status.put("automation_bucket_sec", automationBucketSec);
             status.put("clip_duration_sec", config.clipDurationSec);
@@ -886,10 +901,10 @@ public class JoyfulMomentController {
         mainHandler.post(new Runnable() {
             @Override
             public void run() {
-                hostCallbacks.onJoyfulAutoVideoRequested(finalTriggerVideoDurationSec);
+                hostCallbacks.onJoyfulAutoVideoRequested(request);
             }
         });
-        scheduleAutoPhotos();
+        scheduleAutoPhotos(request);
     }
 
     private void attachClipToEvent(ClipState clipState, String label, String savedPath) {
@@ -973,19 +988,21 @@ public class JoyfulMomentController {
         return ranges;
     }
 
-    private void scheduleAutoPhotos() {
-        mainHandler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                hostCallbacks.onJoyfulAutoPhotoRequested();
-            }
-        }, 1500L);
-        mainHandler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                hostCallbacks.onJoyfulAutoPhotoRequested();
-            }
-        }, 3500L);
+    private void scheduleAutoPhotos(
+            final AtlasCaptureBundleRequest request) {
+        for (int i = 0;
+                i < AppConfig.AUTO_CAPTURE_PHOTOS_PER_BUNDLE;
+                i++) {
+            final AtlasCaptureBundleRequest.PhotoRequest photoRequest =
+                    request.photoRequest(i);
+            mainHandler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    hostCallbacks.onJoyfulAutoPhotoRequested(
+                            photoRequest);
+                }
+            }, AppConfig.autoCapturePhotoDelayMs(i));
+        }
     }
 
     public synchronized void onAutoVideoCaptureStarted() {

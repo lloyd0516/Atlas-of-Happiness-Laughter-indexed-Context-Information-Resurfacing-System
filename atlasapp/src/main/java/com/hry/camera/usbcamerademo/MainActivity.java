@@ -106,14 +106,9 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
     JoyfulMomentController mJoyfulController;
     private boolean mJoyfulAutoRecording = false;
     private boolean mLastRecordWasJoyfulAuto = false;
-    private String mActiveJoyfulAutoVideoEventId = null;
+    private final AtlasAutoCaptureQueue mJoyfulAutoCaptureQueue =
+            new AtlasAutoCaptureQueue();
     private long mActiveJoyfulAutoVideoCaptureTimeMs = 0L;
-    private String mPendingJoyfulAutoVideoEventId = null;
-    private int mPendingJoyfulAutoPhotos = 0;
-    private int mQueuedJoyfulAutoPhotos = 0;
-    private final ArrayList<String> mPendingJoyfulAutoPhotoEventIds = new ArrayList<>();
-    private final ArrayList<String> mQueuedJoyfulAutoPhotoEventIds = new ArrayList<>();
-    private int mPendingJoyfulAutoVideoDurationSec = 0;
     private boolean mManualPreviewRequested = false;
     private boolean mCameraOpenedForAutoOnly = false;
     private boolean mJoyfulAutoOpenInFlight = false;
@@ -912,24 +907,19 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
     }
 
     private void clearPendingJoyfulAutoRequests(String reason) {
-        if (mPendingJoyfulAutoVideoDurationSec > 0 && mJoyfulController != null) {
-            mJoyfulController.onAutoVideoCaptureSkipped(reason);
+        for (AtlasCaptureBundleRequest ignored
+                : mJoyfulAutoCaptureQueue.drainAllVideos()) {
+            if (mJoyfulController != null) {
+                mJoyfulController.onAutoVideoCaptureSkipped(reason);
+            }
         }
-        mPendingJoyfulAutoVideoDurationSec = 0;
-        mPendingJoyfulAutoVideoEventId = null;
-        mActiveJoyfulAutoVideoEventId = null;
-        mActiveJoyfulAutoVideoCaptureTimeMs = 0L;
-        while (mQueuedJoyfulAutoPhotos > 0) {
+        for (AtlasCaptureBundleRequest.PhotoRequest ignored
+                : mJoyfulAutoCaptureQueue.drainAllPhotos()) {
             if (mJoyfulController != null) {
                 mJoyfulController.onAutoPhotoCaptureSkipped(reason);
             }
-            mQueuedJoyfulAutoPhotos -= 1;
         }
-        mQueuedJoyfulAutoPhotoEventIds.clear();
-        synchronized (this) {
-            mPendingJoyfulAutoPhotoEventIds.clear();
-            mPendingJoyfulAutoPhotos = 0;
-        }
+        mActiveJoyfulAutoVideoCaptureTimeMs = 0L;
     }
 
     private void ensureCameraReadyForJoyfulAuto() {
@@ -954,16 +944,16 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
             return;
         }
 
-        if (mPendingJoyfulAutoVideoDurationSec > 0 && !m_bIsRecording) {
-            int durationSec = mPendingJoyfulAutoVideoDurationSec;
-            mPendingJoyfulAutoVideoDurationSec = 0;
+        if (mJoyfulAutoCaptureQueue.pendingVideoCount() > 0
+                && !m_bIsRecording) {
+            AtlasCaptureBundleRequest activeVideo =
+                    mJoyfulAutoCaptureQueue.activateNextVideo();
+            int durationSec = activeVideo.videoDurationSec;
             mJoyfulAutoRecording = true;
-            mActiveJoyfulAutoVideoEventId = mPendingJoyfulAutoVideoEventId;
             mActiveJoyfulAutoVideoCaptureTimeMs = System.currentTimeMillis();
-            mPendingJoyfulAutoVideoEventId = null;
             if (mJoyfulController != null) {
                 mJoyfulController.onAutoVideoCaptureStarted(
-                        mActiveJoyfulAutoVideoEventId,
+                        activeVideo.eventId,
                         mActiveJoyfulAutoVideoCaptureTimeMs);
             }
             Toast.makeText(MainActivity.this, "Joyful auto video started", Toast.LENGTH_SHORT).show();
@@ -973,7 +963,7 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
                 mHandler.sendEmptyMessageDelayed(MSG_JOYFUL_AUTO_STOP_RECORD, durationSec * 1000L);
             } else {
                 mJoyfulAutoRecording = false;
-                mActiveJoyfulAutoVideoEventId = null;
+                mJoyfulAutoCaptureQueue.completeActiveVideo();
                 mActiveJoyfulAutoVideoCaptureTimeMs = 0L;
                 if (mJoyfulController != null) {
                     mJoyfulController.onAutoVideoCaptureSkipped("record_start_failed");
@@ -981,23 +971,12 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
             }
         }
 
-        while (mQueuedJoyfulAutoPhotos > 0 && mCameraThread.isOpen()) {
-            String targetEventId = null;
-            if (!mQueuedJoyfulAutoPhotoEventIds.isEmpty()) {
-                targetEventId = mQueuedJoyfulAutoPhotoEventIds.remove(0);
-            }
-            synchronized (this) {
-                mPendingJoyfulAutoPhotos += 1;
-                mPendingJoyfulAutoPhotoEventIds.add(targetEventId);
-            }
-            mQueuedJoyfulAutoPhotos -= 1;
+        while (mJoyfulAutoCaptureQueue.queuedPhotoCount() > 0
+                && mCameraThread.isOpen()) {
+            mJoyfulAutoCaptureQueue.dispatchNextPhoto();
             mCameraThread.stillCapture(mPictureCallback);
         }
         maybeSleepJoyfulAutoCamera();
-    }
-
-    private synchronized int getPendingJoyfulAutoPhotoCount() {
-        return mPendingJoyfulAutoPhotos;
     }
 
     private void maybeSleepJoyfulAutoCamera() {
@@ -1010,7 +989,7 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
         if (m_bIsRecording || mJoyfulAutoRecording) {
             return;
         }
-        if (mPendingJoyfulAutoVideoDurationSec > 0 || mQueuedJoyfulAutoPhotos > 0 || getPendingJoyfulAutoPhotoCount() > 0) {
+        if (mJoyfulAutoCaptureQueue.hasWork()) {
             return;
         }
         mCameraOpenedForAutoOnly = false;
@@ -1186,8 +1165,12 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
                   // 显示提示消息
                   Toast.makeText(MainActivity.this, "视频已完成录制!", Toast.LENGTH_SHORT).show();
                   if (mLastRecordWasJoyfulAuto && mJoyfulController != null) {
+                      AtlasCaptureBundleRequest activeVideo =
+                              mJoyfulAutoCaptureQueue.activeVideo();
                       mJoyfulController.onAutoVideoSaved(
-                              mActiveJoyfulAutoVideoEventId,
+                              activeVideo != null
+                                      ? activeVideo.eventId
+                                      : null,
                               mMediaVideoPath,
                               uri != null ? uri.toString() : null,
                               mActiveJoyfulAutoVideoCaptureTimeMs);
@@ -1199,10 +1182,11 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
               m_bIsRecording = false;
               mJoyfulAutoRecording = false;
               mLastRecordWasJoyfulAuto = false;
-              mActiveJoyfulAutoVideoEventId = null;
+              mJoyfulAutoCaptureQueue.completeActiveVideo();
               mActiveJoyfulAutoVideoCaptureTimeMs = 0L;
 
             this.mRecordBtn.setText("录像");
+            drainPendingJoyfulAutoActions();
             maybeSleepJoyfulAutoCamera();
         } catch (final Exception e) {
 
@@ -1441,10 +1425,13 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
             if (uri != null) {
 
                 mFileUtil.broadcastNewImage(MainActivity.this, uri);
-                final String joyfulAutoPhotoEventId = consumePendingJoyfulAutoPhoto();
-                if (joyfulAutoPhotoEventId != null && mJoyfulController != null) {
+                final AtlasCaptureBundleRequest.PhotoRequest
+                        joyfulAutoPhotoRequest =
+                        consumePendingJoyfulAutoPhoto();
+                if (joyfulAutoPhotoRequest != null
+                        && mJoyfulController != null) {
                     mJoyfulController.onAutoPhotoSaved(
-                            joyfulAutoPhotoEventId,
+                            joyfulAutoPhotoRequest.bundle.eventId,
                             path,
                             dateTaken);
                     runOnUiThread(new Runnable() {
@@ -1754,8 +1741,8 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
     }
 
     @Override
-    public void onJoyfulAutoVideoRequested(int durationSec) {
-        final int finalDurationSec = durationSec;
+    public void onJoyfulAutoVideoRequested(
+            final AtlasCaptureBundleRequest request) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -1772,22 +1759,15 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
                     }
                     return;
                 }
-                if (m_bIsRecording && mJoyfulAutoRecording) {
-                    mHandler.removeMessages(MSG_JOYFUL_AUTO_STOP_RECORD);
-                    mHandler.sendEmptyMessageDelayed(MSG_JOYFUL_AUTO_STOP_RECORD, finalDurationSec * 1000L);
-                    return;
-                }
-                if (finalDurationSec >= mPendingJoyfulAutoVideoDurationSec) {
-                    mPendingJoyfulAutoVideoDurationSec = finalDurationSec;
-                    mPendingJoyfulAutoVideoEventId = mJoyfulController != null ? mJoyfulController.getLastTriggeredEventId() : null;
-                }
+                mJoyfulAutoCaptureQueue.enqueueVideo(request);
                 ensureCameraReadyForJoyfulAuto();
             }
         });
     }
 
     @Override
-    public void onJoyfulAutoPhotoRequested() {
+    public void onJoyfulAutoPhotoRequested(
+            final AtlasCaptureBundleRequest.PhotoRequest request) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -1798,8 +1778,7 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
                     Toast.makeText(MainActivity.this, "Joyful auto photo skipped: camera permission missing", Toast.LENGTH_SHORT).show();
                     return;
                 }
-                mQueuedJoyfulAutoPhotos += 1;
-                mQueuedJoyfulAutoPhotoEventIds.add(mJoyfulController != null ? mJoyfulController.getLastTriggeredEventId() : null);
+                mJoyfulAutoCaptureQueue.enqueuePhoto(request);
                 ensureCameraReadyForJoyfulAuto();
             }
         });
@@ -1817,15 +1796,9 @@ public class MainActivity extends AppCompatActivity implements JoyfulMomentContr
         encoder.offerPcm(pcm16le, byteLen);
     }
 
-    private synchronized String consumePendingJoyfulAutoPhoto() {
-        if (mPendingJoyfulAutoPhotos <= 0) {
-            return null;
-        }
-        mPendingJoyfulAutoPhotos -= 1;
-        if (mPendingJoyfulAutoPhotoEventIds.isEmpty()) {
-            return mJoyfulController != null ? mJoyfulController.getLastTriggeredEventId() : null;
-        }
-        return mPendingJoyfulAutoPhotoEventIds.remove(0);
+    private synchronized AtlasCaptureBundleRequest.PhotoRequest
+            consumePendingJoyfulAutoPhoto() {
+        return mJoyfulAutoCaptureQueue.completeNextPhoto();
     }
 
 
