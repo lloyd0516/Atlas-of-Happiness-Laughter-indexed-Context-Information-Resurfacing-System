@@ -426,45 +426,4 @@ final class AtlasClipMediaMatcher {
         return left < right ? -1 : (left == right ? 0 : 1);
     }
 
-    /**
-     * Compatibility path used until EventDetailActivity switches to bundle matching.
-     */
-    static String findNearestPath(
-            JSONArray items,
-            String pathKey,
-            long clipTimeMs,
-            long maxDeltaMs) {
-        if (items == null
-                || pathKey == null
-                || pathKey.length() == 0
-                || clipTimeMs <= 0L
-                || maxDeltaMs < 0L) {
-            return null;
-        }
-        String bestPath = null;
-        long bestTime = -1L;
-        long bestDelta = Long.MAX_VALUE;
-        for (MediaCandidate candidate
-                : parseCandidates(items, pathKey)) {
-            long delta = absoluteDelta(
-                    candidate.captureTimeMs,
-                    clipTimeMs);
-            if (delta > maxDeltaMs) {
-                continue;
-            }
-            boolean better = bestPath == null
-                    || delta < bestDelta
-                    || (delta == bestDelta
-                            && candidate.captureTimeMs < bestTime)
-                    || (delta == bestDelta
-                            && candidate.captureTimeMs == bestTime
-                            && candidate.path.compareTo(bestPath) < 0);
-            if (better) {
-                bestPath = candidate.path;
-                bestTime = candidate.captureTimeMs;
-                bestDelta = delta;
-            }
-        }
-        return bestPath;
-    }
 }

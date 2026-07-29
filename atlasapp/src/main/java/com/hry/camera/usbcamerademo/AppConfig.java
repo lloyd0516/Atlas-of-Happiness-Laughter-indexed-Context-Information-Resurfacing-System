@@ -71,10 +71,6 @@ public final class AppConfig {
     /** Time window used only to infer capture bundles in legacy records. */
     public static final long LEGACY_CAPTURE_BUNDLE_GROUP_WINDOW_MS =
             15L * 1000L;
-    /** Temporary source-compatibility alias removed with bundle-aware detail rendering. */
-    @Deprecated
-    public static final int CLIP_MEDIA_MAX_PER_TYPE = 1;
-
     /**
      * Auto photo/video capture is rate-limited to at most once per this many clips.
      * Requirement: changed from 2*clip (60s @ 30s clips) to 4*clip (120s @ 30s clips).

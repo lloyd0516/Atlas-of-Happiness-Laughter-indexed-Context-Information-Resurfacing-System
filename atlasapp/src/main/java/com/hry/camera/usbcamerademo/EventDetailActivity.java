@@ -549,8 +549,19 @@ public class EventDetailActivity extends AppCompatActivity {
 
         final String contextPath = contextClip != null ? contextClip.optString("path", null) : null;
 
-        List<String> clipPhotoPaths = collectNearbyPhotoPaths(photos, deviceTimeMs);
-        List<String> clipVideoPaths = collectNearbyVideoPaths(videos, deviceTimeMs);
+        AtlasClipMediaMatcher.MatchedCaptureBundle mediaBundle =
+                AtlasClipMediaMatcher.findNearestBundle(
+                        photos,
+                        videos,
+                        deviceTimeMs,
+                        AppConfig.CLIP_MEDIA_MATCH_WINDOW_MS,
+                        AppConfig.LEGACY_CAPTURE_BUNDLE_GROUP_WINDOW_MS);
+        List<String> clipPhotoPaths = mediaBundle == null
+                ? Collections.<String>emptyList()
+                : mediaBundle.photoPaths;
+        List<String> clipVideoPaths = mediaBundle == null
+                ? Collections.<String>emptyList()
+                : mediaBundle.videoPaths;
 
         if (longTermMode) {
             photoStripShort.setVisibility(View.GONE);
@@ -850,50 +861,9 @@ public class EventDetailActivity extends AppCompatActivity {
         }
     }
 
-    private List<String> collectNearbyPhotoPaths(JSONArray photos, long clipTimeMs) {
-        return singletonMediaPath(AtlasClipMediaMatcher.findNearestPath(
-                photos,
-                "photo_path",
-                clipTimeMs,
-                AppConfig.CLIP_MEDIA_MATCH_WINDOW_MS));
-    }
-
-    private List<String> collectNearbyVideoPaths(JSONArray videos, long clipTimeMs) {
-        return singletonMediaPath(AtlasClipMediaMatcher.findNearestPath(
-                videos,
-                "video_path",
-                clipTimeMs,
-                AppConfig.CLIP_MEDIA_MATCH_WINDOW_MS));
-    }
-
-    private List<String> singletonMediaPath(String path) {
-        ArrayList<String> result = new ArrayList<>();
-        if (!TextUtils.isEmpty(path)
-                && AppConfig.CLIP_MEDIA_MAX_PER_TYPE > 0) {
-            result.add(path);
-        }
-        return result;
-    }
-
     private void populatePhotoStrip(LinearLayout container, List<String> photoPaths, List<String> videoPaths) {
         container.removeAllViews();
         int thumbSize = dp(64);
-        for (final String path : videoPaths) {
-            ImageView thumb = new ImageView(this);
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(thumbSize, thumbSize);
-            params.rightMargin = dp(6);
-            thumb.setLayoutParams(params);
-            thumb.setScaleType(ImageView.ScaleType.CENTER_CROP);
-            thumb.setBackgroundResource(R.drawable.atlas_section_bg);
-            thumb.setImageResource(R.drawable.ic_atlas_video);
-            thumb.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    previewMedia(new JSONObject(), path);
-                }
-            });
-            container.addView(thumb);
-        }
         for (final String path : photoPaths) {
             ImageView thumb = new ImageView(this);
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(thumbSize, thumbSize);
@@ -916,6 +886,22 @@ public class EventDetailActivity extends AppCompatActivity {
                     putResearchMediaExtras(
                             intent, path, "photo", true);
                     startActivity(intent);
+                }
+            });
+            container.addView(thumb);
+        }
+        for (final String path : videoPaths) {
+            ImageView thumb = new ImageView(this);
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(thumbSize, thumbSize);
+            params.rightMargin = dp(6);
+            thumb.setLayoutParams(params);
+            thumb.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            thumb.setBackgroundResource(R.drawable.atlas_section_bg);
+            thumb.setImageResource(R.drawable.ic_atlas_video);
+            thumb.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    previewMedia(new JSONObject(), path);
                 }
             });
             container.addView(thumb);
